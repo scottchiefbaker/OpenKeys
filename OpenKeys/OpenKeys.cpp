@@ -7,11 +7,11 @@
 HHOOK hHook;
 std::string buffer;
 std::unordered_map<std::string, std::string> shortcuts = {
-    {"`brb", "be right back"},
-    {"`idk", "I don't know"},
-    {"`omw", "on my way"},
-    {"`gtg", "got to go"},
-    {"`np", "no problem"}
+    {"brb", "be right back"},
+    {"idk", "I don't know"},
+    {"omw", "on my way"},
+    {"gtg", "got to go"},
+    {"np", "no problem"}
 };
 void SendText(const std::string& text) {
     for (char c : text) {
