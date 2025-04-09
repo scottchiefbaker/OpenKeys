@@ -11,7 +11,8 @@ std::unordered_map<std::string, std::string> shortcuts = {
     {"idk", "I don't know"},
     {"omw", "on my way"},
     {"gtg", "got to go"},
-    {"np", "no problem"}
+    {"np", "no problem"},
+    {"email", "Hello, [Name], [body] Thanks, - Roland"}
 };
 void SendText(const std::string& text) {
     for (char c : text) {
