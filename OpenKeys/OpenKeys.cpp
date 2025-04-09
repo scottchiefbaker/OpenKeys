@@ -12,27 +12,38 @@ std::unordered_map<std::string, std::string> shortcuts = {
     {"omw", "on my way"},
     {"gtg", "got to go"},
     {"np", "no problem"},
-    {"email", "Hello, [Name], [body] Thanks, - Roland"}
+    {"ema", "Hello, [Name],\r\n\r\n[body]\r\n\r\nThanks,\r\n- Roland"}
 };
+void copy(std::string text) {
+    const char* output = text.c_str();
+    const size_t len = strlen(output) + 1;
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
+    memcpy(GlobalLock(hMem), output, len);
+    GlobalUnlock(hMem);
+    OpenClipboard(0);
+    EmptyClipboard();
+    SetClipboardData(CF_TEXT, hMem);
+    CloseClipboard();
+}
 void SendText(const std::string& text) {
-    for (char c : text) {
-        SHORT vk = VkKeyScanA(c);
-        if (vk == -1) continue;
-
-        // Press key
-        KEYBDINPUT kb = {};
-        INPUT input = {};
-        kb.wVk = LOBYTE(vk);
-        kb.dwFlags = 0;
-        input.type = INPUT_KEYBOARD;
-        input.ki = kb;
-        SendInput(1, &input, sizeof(INPUT));
-
-        // Release key
-        kb.dwFlags = KEYEVENTF_KEYUP;
-        input.ki = kb;
-        SendInput(1, &input, sizeof(INPUT));
-    }
+    copy(text);
+    INPUT ip;
+    ip.type = INPUT_KEYBOARD;
+    ip.ki.wScan = 0;
+    ip.ki.time = 0;
+    ip.ki.dwExtraInfo = 0;
+    ip.ki.wVk = VK_CONTROL;
+    ip.ki.dwFlags = 0;
+    SendInput(1, &ip, sizeof(INPUT));
+    ip.ki.wVk = 'V';
+    ip.ki.dwFlags = 0;
+    SendInput(1, &ip, sizeof(INPUT));
+    ip.ki.wVk = 'V';
+    ip.ki.dwFlags = KEYEVENTF_KEYUP;
+    SendInput(1, &ip, sizeof(INPUT));
+    ip.ki.wVk = VK_CONTROL;
+    ip.ki.dwFlags = KEYEVENTF_KEYUP;
+    SendInput(1, &ip, sizeof(INPUT));
 }
 bool fix_stupid_bug = false;
 LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -94,7 +105,7 @@ int main() {
     }
 
     MSG msg;
-    while (GetMessage(&msg, nullptr, 0, 0)) {
+    while (GetMessage(&msg, nullptr, 0, 0) ) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);        
     }
