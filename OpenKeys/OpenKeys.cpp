@@ -18,6 +18,7 @@ HFONT hFont;
 std::map<std::wstring, std::wstring> shortcuts;
 HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
+std::wstring prefix;
 
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
@@ -27,7 +28,6 @@ std::wstring Utf8ToWstring(const std::string& str) {
     MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &result[0], size_needed);
     return result;
 }
-
 void UpdateDisplayedTextFromShortcuts() {
     displayedText = L"Shortcuts:\n";
     for (const auto& pair : shortcuts) {
@@ -44,7 +44,7 @@ void LoadShortcutsFromJSON(const std::wstring& filename) {
     try {
         nlohmann::json jsonData;
         file >> jsonData;
-
+        prefix = Utf8ToWstring(jsonData["prefix"]);
         shortcuts.clear(); // Make sure you're clearing old shortcuts
         for (auto& el : jsonData["shortcuts"].items()) {
             std::wstring key = Utf8ToWstring(el.key());
@@ -83,7 +83,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                 if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);
 
                 for (const auto& pair : shortcuts) {
-                    std::wstring trigger = L";" + pair.first;
+                    std::wstring trigger = prefix + pair.first;
                     if (keyBuffer.size() >= trigger.size() &&
                         keyBuffer.compare(keyBuffer.size() - trigger.size(), trigger.size(), trigger) == 0) {
 
