@@ -14,10 +14,14 @@ HHOOK hKeyboardHook;
 std::wstring keyBuffer;
 std::wstring displayedText = L"Epic Thing!!!!";
 HFONT hFont;
+
+//JSON data
+std::wstring prefix;
+std::wstring version;
 std::map<std::wstring, std::wstring> shortcuts;
+
 HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
-std::wstring prefix;
 
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
@@ -28,7 +32,8 @@ std::wstring Utf8ToWstring(const std::string& str) {
     return result;
 }
 void UpdateDisplayedTextFromShortcuts() {
-    displayedText = L"Prefix: " + prefix + L"\n";
+    displayedText = L"Shortcuts Version: " + version + L"\n";
+    displayedText += L"Prefix: " + prefix + L"\n";
     displayedText += L"Shortcuts:\n";
     for (const auto& pair : shortcuts) {
         displayedText += pair.first + L" → " + pair.second + L"\n";
@@ -45,6 +50,7 @@ void LoadShortcutsFromJSON(const std::wstring& filename) {
         nlohmann::json jsonData;
         file >> jsonData;
         prefix = Utf8ToWstring(jsonData["prefix"]);
+        version = Utf8ToWstring(jsonData["version"]);
         shortcuts.clear(); // Make sure you're clearing old shortcuts
         for (auto& el : jsonData["shortcuts"].items()) {
             std::wstring key = Utf8ToWstring(el.key());
