@@ -29,7 +29,8 @@ std::wstring Utf8ToWstring(const std::string& str) {
     return result;
 }
 void UpdateDisplayedTextFromShortcuts() {
-    displayedText = L"Shortcuts:\n";
+    displayedText = L"Prefix: " + prefix + L"\n";
+    displayedText += L"Shortcuts:\n";
     for (const auto& pair : shortcuts) {
         displayedText += pair.first + L" → " + pair.second + L"\n";
     }
