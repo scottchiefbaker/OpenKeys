@@ -9,7 +9,6 @@
 #include <iostream>
 
 #define MAX_LOADSTRING 100
-#define IDT_REFRESH_TIMER 1
 
 HHOOK hKeyboardHook;
 std::wstring keyBuffer;
@@ -219,7 +218,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
-   SetTimer(g_hWnd, IDT_REFRESH_TIMER, 1000, NULL);  // 1000 ms = 1 second
 
    return TRUE;
 }
@@ -290,7 +288,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         break;
     case WM_DESTROY:
         DeleteObject(hFont);
-        KillTimer(hWnd, IDT_REFRESH_TIMER);
         UnhookWindowsHookEx(hKeyboardHook);
         PostQuitMessage(0);
         break;
@@ -330,12 +327,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         SendInput(inputIndex, inputs, sizeof(INPUT));
         break;
     }
-    case WM_TIMER:
-        if (wParam == IDT_REFRESH_TIMER) {
-            InvalidateRect(hWnd, NULL, TRUE);
-        }
-        break;
-
     default: 
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
