@@ -5,7 +5,7 @@ TO-DO:
 - ~~Make the shortcuts come from a file~~
 - ~~Add custom trigger key~~
 - Minimize to tray
-- Add swag icon
+- ~~Add swag icon~~
 - Newline support
 - Show version in about
 - Log file for button logging
