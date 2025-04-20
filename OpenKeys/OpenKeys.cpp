@@ -5,6 +5,8 @@
 #include <json.hpp>
 #include <fstream>
 #include <map>
+#include <filesystem>
+#include <iostream>
 
 #define MAX_LOADSTRING 100
 #define IDT_REFRESH_TIMER 1
@@ -35,7 +37,7 @@ void UpdateDisplayedTextFromShortcuts() {
 void LoadShortcutsFromJSON(const std::wstring& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        displayedText = L"Failed to open shortcuts.json!";
+        displayedText = L"Failed to open " + filename;
         return;
     }
 
@@ -200,7 +202,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 
    // Create Font for Window (Ridiculous)
    LOGFONT lf = { 0 };
-   lf.lfHeight = 100;  // Font height
+   lf.lfHeight = 24;  // Font height
    lf.lfWeight = FW_NORMAL;  // Regular weight
    lf.lfItalic = FALSE;  // No italics
    lf.lfUnderline = FALSE;  // No underline
@@ -210,8 +212,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    hFont = CreateFontIndirect(&lf);
 
    //Load Shortcuts
-   LoadShortcutsFromJSON(L"C:/Users/rolan/OneDrive/Documents/Roland C++/OpenKeys/OpenKeys/x64/Debug/shortcuts.json");
-
+   std::filesystem::path fullpath = __FILE__;
+   std::wstring dirname = fullpath.parent_path();
+   LoadShortcutsFromJSON(dirname + L"/shortcuts.json");
+   
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
    SetTimer(g_hWnd, IDT_REFRESH_TIMER, 1000, NULL);  // 1000 ms = 1 second
@@ -292,7 +296,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     case WM_USER + 1: {
         size_t triggerLen = (size_t)wParam;
 
-        INPUT inputs[512] = {};
+        INPUT inputs[2048] = {};
         int inputIndex = 0;
 
         // Step 1: Backspace trigger
