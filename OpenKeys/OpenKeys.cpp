@@ -193,7 +193,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int) msg.wParam;
 }
 
-
+void MinimizeToTray(HWND hWnd) {
+    ShowWindow(hWnd, SW_HIDE);
+    AddTrayIcon(hWnd);
+}
+void RestoreFromTray(HWND hWnd) {
+    ShowWindow(hWnd, SW_SHOW);
+    ShowWindow(hWnd, SW_RESTORE);
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+}
 
 //
 //  FUNCTION: MyRegisterClass()
@@ -261,8 +269,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    //Load Shortcuts
    LoadShortcutsFromJSON(json_path);
    
-   ShowWindow(hWnd, nCmdShow);
+   //ShowWindow(hWnd, nCmdShow); // Don't Show on startup
    UpdateWindow(hWnd);
+
+   MinimizeToTray(hWnd); // Start minimized in tray
 
    return TRUE;
 }
@@ -375,16 +385,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     }
     case WM_SIZE:
         if (wParam == SIZE_MINIMIZED) {
-            ShowWindow(hWnd, SW_HIDE);
-            AddTrayIcon(hWnd);
+            MinimizeToTray(hWnd);
         }
         break;
 
     case WM_TRAYICON:
         if (lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP) {
-            ShowWindow(hWnd, SW_SHOW);
-            ShowWindow(hWnd, SW_RESTORE);
-            Shell_NotifyIcon(NIM_DELETE, &nid);
+            RestoreFromTray(hWnd);
         }
         break;
 
