@@ -341,11 +341,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
         }
         break;
-    case WM_DESTROY:
+    case WM_DESTROY: {
         DeleteObject(hFont);
         Shell_NotifyIcon(NIM_DELETE, &nid);
         UnhookWindowsHookEx(hKeyboardHook);
         PostQuitMessage(0);
+    }
         break;
     case WM_USER + 1: {
         size_t triggerLen = (size_t)wParam;
@@ -381,20 +382,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         }
 
         SendInput(inputIndex, inputs, sizeof(INPUT));
-        break;
     }
-    case WM_SIZE:
+        break;
+    case WM_SIZE: {
         if (wParam == SIZE_MINIMIZED) {
             MinimizeToTray(hWnd);
         }
+    }
         break;
-
-    case WM_TRAYICON:
+    case WM_TRAYICON: {
         if (lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP) {
             RestoreFromTray(hWnd);
         }
+    }
         break;
-
     default: 
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
