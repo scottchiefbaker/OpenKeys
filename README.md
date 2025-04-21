@@ -12,4 +12,4 @@ TO-DO:
 - Read JSON from URL
 - Sign code for Windows security
 - Swaggify
-- (Optional) Fix notepad glitch
+- ~~(Optional) Fix notepad glitch~~
