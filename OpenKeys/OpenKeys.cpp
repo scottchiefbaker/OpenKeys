@@ -15,12 +15,14 @@
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
 
+// Keyboard stuff
 HHOOK hKeyboardHook;
 std::wstring keyBuffer;
 std::wstring displayedText = L"Epic Thing!!!!";
 HFONT hFont;
+INPUT inputs[2048] = {}; // Moved to heap for data saving
 
-//JSON data
+// JSON data
 std::wstring prefix;
 std::wstring version;
 std::map<std::wstring, std::wstring> shortcuts;
@@ -345,13 +347,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         DeleteObject(hFont);
         Shell_NotifyIcon(NIM_DELETE, &nid);
         UnhookWindowsHookEx(hKeyboardHook);
+        delete inputs;
         PostQuitMessage(0);
     }
         break;
     case WM_USER + 1: {
         size_t triggerLen = (size_t)wParam;
 
-        INPUT inputs[2048] = {};
         int inputIndex = 0;
 
         // Step 1: Backspace trigger
