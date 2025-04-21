@@ -7,8 +7,13 @@
 #include <map>
 #include <filesystem>
 #include <iostream>
+#include <shellapi.h>
 
 #define MAX_LOADSTRING 100
+#define WM_TRAYICON (WM_USER + 2)
+
+NOTIFYICONDATA nid = {};
+HMENU hTrayMenu = nullptr;
 
 HHOOK hKeyboardHook;
 std::wstring keyBuffer;
@@ -132,6 +137,18 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+
+void AddTrayIcon(HWND hWnd) {
+    nid.cbSize = sizeof(NOTIFYICONDATA);
+    nid.hWnd = hWnd;
+    nid.uID = 1;
+    nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+    nid.uCallbackMessage = WM_TRAYICON;
+    nid.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_OPENKEYS)); // your app icon
+    wcscpy_s(nid.szTip, L"OpenKeys");
+
+    Shell_NotifyIcon(NIM_ADD, &nid);
+}
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -316,6 +333,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         break;
     case WM_DESTROY:
         DeleteObject(hFont);
+        Shell_NotifyIcon(NIM_DELETE, &nid);
         UnhookWindowsHookEx(hKeyboardHook);
         PostQuitMessage(0);
         break;
@@ -355,6 +373,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         SendInput(inputIndex, inputs, sizeof(INPUT));
         break;
     }
+    case WM_SIZE:
+        if (wParam == SIZE_MINIMIZED) {
+            ShowWindow(hWnd, SW_HIDE);
+            AddTrayIcon(hWnd);
+        }
+        break;
+
+    case WM_TRAYICON:
+        if (lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP) {
+            ShowWindow(hWnd, SW_SHOW);
+            ShowWindow(hWnd, SW_RESTORE);
+            Shell_NotifyIcon(NIM_DELETE, &nid);
+        }
+        break;
+
     default: 
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
