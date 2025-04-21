@@ -16,5 +16,5 @@ TO-DO:
 - Detect Multiple Instances
 - Only show keys in UI (not values)
 - Point at URL for JSON file
-- Start minimized?
+- ~~Start minimized?~~
 - New-line issues pasting into Java
