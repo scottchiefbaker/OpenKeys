@@ -23,6 +23,9 @@ std::map<std::wstring, std::wstring> shortcuts;
 HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
 
+// Global variable for path to JSON file
+std::wstring json_path;
+
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
 
@@ -32,7 +35,8 @@ std::wstring Utf8ToWstring(const std::string& str) {
     return result;
 }
 void UpdateDisplayedTextFromShortcuts() {
-    displayedText = L"Shortcuts Version: " + version + L"\n";
+    displayedText =  L"Shortcuts Version: " + version + L"\n";
+    displayedText += L"JSON File: " + json_path + L"\n";
     displayedText += L"Prefix: " + prefix + L"\n";
     displayedText += L"Shortcuts:\n";
     for (const auto& pair : shortcuts) {
@@ -70,6 +74,23 @@ void LoadShortcutsFromJSON(const std::wstring& filename) {
         InvalidateRect(g_hWnd, NULL, TRUE);
         UpdateWindow(g_hWnd);
     }
+}
+
+std::wstring GetExecutableDirectory() {
+    wchar_t path[MAX_PATH];
+    DWORD length = GetModuleFileNameW(NULL, path, MAX_PATH);
+    if (length == 0 || length == MAX_PATH) {
+        // Handle error
+        return L"";
+    }
+
+    std::wstring fullPath(path);
+    size_t lastSlash = fullPath.find_last_of(L"\\/");
+    if (lastSlash != std::wstring::npos) {
+        return fullPath.substr(0, lastSlash);
+    }
+
+    return fullPath; // fallback to full path if no slash found
 }
 
 static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -131,6 +152,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_OPENKEYS, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
+
+    // JSON file is found in the directory of the .exe
+    json_path = GetExecutableDirectory() + L"/shortcuts.json";
 
     // Perform application initialization:
     if (!InitInstance (hInstance, nCmdShow)) {
@@ -218,9 +242,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    hFont = CreateFontIndirect(&lf);
 
    //Load Shortcuts
-   std::filesystem::path fullpath = __FILE__;
-   std::wstring dirname = fullpath.parent_path();
-   LoadShortcutsFromJSON(dirname + L"/shortcuts.json");
+   LoadShortcutsFromJSON(json_path);
    
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
