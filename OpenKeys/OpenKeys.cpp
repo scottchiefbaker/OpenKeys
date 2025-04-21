@@ -204,6 +204,13 @@ void RestoreFromTray(HWND hWnd) {
     ShowWindow(hWnd, SW_RESTORE);
     Shell_NotifyIcon(NIM_DELETE, &nid);
 }
+void CloseWindowAndExit() {
+    DeleteObject(hFont);
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+    UnhookWindowsHookEx(hKeyboardHook);
+    delete inputs;
+    PostQuitMessage(0);
+}
 
 //
 //  FUNCTION: MyRegisterClass()
@@ -344,11 +351,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         }
         break;
     case WM_DESTROY: {
-        DeleteObject(hFont);
-        Shell_NotifyIcon(NIM_DELETE, &nid);
-        UnhookWindowsHookEx(hKeyboardHook);
-        delete inputs;
-        PostQuitMessage(0);
+        CloseWindowAndExit();
     }
         break;
     case WM_USER + 1: {
@@ -393,8 +396,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     }
         break;
     case WM_TRAYICON: {
-        if (lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP) {
+        if (lParam == WM_LBUTTONUP) {
             RestoreFromTray(hWnd);
+        }
+        else if (lParam == WM_RBUTTONUP) {
+            CloseWindowAndExit();
         }
     }
         break;
