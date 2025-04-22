@@ -18,3 +18,4 @@ TO-DO:
 - Point at URL for JSON file
 - ~~Start minimized?~~
 - New-line issues pasting into Java
+- ~~Option to reload the JSON file in the UI~~
