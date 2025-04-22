@@ -445,7 +445,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         // Step 3: if shortcut contains & move text cursor to it
         if (gotocharenabled) {
             if (pendingReplacement.find(gotochar) != std::wstring::npos) {
-                int pos = pendingReplacement.length() - pendingReplacement.find(gotochar) - 1;
+
+                size_t pos = pendingReplacement.length() - pendingReplacement.find(gotochar) - 1;
+
                 for (int i = 0; i < pos; i++) {
                     inputs[inputIndex].type = INPUT_KEYBOARD;
                     inputs[inputIndex].ki.wVk = VK_LEFT;
