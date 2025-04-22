@@ -181,8 +181,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return(1);
     }
 
-    // TODO: Place code here.
-
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_OPENKEYS, szWindowClass, MAX_LOADSTRING);
@@ -411,6 +409,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
             inputIndex++;
         }
+        
+        // Step 3: if shortcut contains & move text cursor to it
+        if (pendingReplacement.find('&') != std::wstring::npos) {
+            int pos = pendingReplacement.length() - pendingReplacement.find('&') - 1;
+            for (int i = 0; i < pos; i++) {
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = VK_LEFT;
+                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE;
+                inputIndex++;
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = VK_LEFT;
+                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+                inputIndex++;
+            }
+        }
+        
+        inputs[inputIndex].type = INPUT_KEYBOARD;
+        inputs[inputIndex].ki.wVk = VK_BACK;
+        inputIndex++;
+
+        inputs[inputIndex].type = INPUT_KEYBOARD;
+        inputs[inputIndex].ki.wVk = VK_BACK;
+        inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
+        inputIndex++;
 
         SendInput(inputIndex, inputs, sizeof(INPUT));
     }
