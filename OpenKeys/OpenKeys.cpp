@@ -13,6 +13,8 @@
 #define WM_TRAYICON (WM_USER + 2)
 bool START_MINIMIZED = false;
 
+std::wstring VERSION_STRING = L"0.1.7";
+
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
 
@@ -21,7 +23,8 @@ HHOOK hKeyboardHook;
 std::wstring keyBuffer;
 std::wstring displayedText = L"Epic Thing!!!!";
 HFONT hFont;
-INPUT inputs[2048] = {}; // Moved to heap for data saving
+// Declare an array of 2048 inputs
+INPUT* inputs = new INPUT[2048]();
 
 // JSON data
 std::wstring prefix;
@@ -215,6 +218,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     MSG msg;
 
+    // Include the version in the title of the window
+    std::wstring window_title = L"OpenKeys v" + VERSION_STRING;
+    SetWindowText(g_hWnd, window_title.c_str());
+
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
@@ -241,7 +248,9 @@ void CloseWindowAndExit() {
     DeleteObject(hFont);
     Shell_NotifyIcon(NIM_DELETE, &nid);
     UnhookWindowsHookEx(hKeyboardHook);
-    delete inputs;
+
+    // Free the memory from the inputs
+    delete[] inputs;
     PostQuitMessage(0);
 }
 
