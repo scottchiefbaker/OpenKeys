@@ -13,6 +13,8 @@
 #define WM_TRAYICON (WM_USER + 2)
 bool START_MINIMIZED = false;
 
+std::wstring VERSION_STRING = L"0.1.7";
+
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
 
@@ -213,6 +215,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_OPENKEYS));
 
     MSG msg;
+
+    // Include the version in the title of the window
+    std::wstring window_title = L"OpenKeys v" + VERSION_STRING;
+    SetWindowText(g_hWnd, window_title.c_str());
 
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0)) {
