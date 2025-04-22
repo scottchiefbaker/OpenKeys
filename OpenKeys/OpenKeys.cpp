@@ -28,7 +28,7 @@ INPUT* inputs = new INPUT[2048]();
 
 // JSON data
 std::wstring prefix;
-std::wstring gotochar; bool gotocharenabled = false;
+std::wstring gotochar;
 std::wstring version;
 std::map<std::wstring, std::wstring> shortcuts;
 
@@ -53,7 +53,11 @@ void UpdateDisplayedTextFromShortcuts() {
     displayedText =  L"Shortcuts Version: " + version + L"\n";
     displayedText += L"JSON File: " + json_path + L"\n";
     displayedText += L"Prefix Key: " + prefix + L"\n";
-    if(gotocharenabled) displayedText += L"Goto Char: " + gotochar + L"\n";
+
+    if (gotochar.length() > 0) {
+        displayedText += L"Goto Char: " + gotochar + L"\n";
+    }
+
     displayedText += L"\n";
     displayedText += L"Shortcuts:\n";
     for (const auto& pair : shortcuts) {
@@ -74,13 +78,12 @@ void LoadDataFromJson(const std::wstring& filename) {
         prefix = Utf8ToWstring(jsonData["prefix"]);
         version = Utf8ToWstring(jsonData["version"]);
         shortcuts.clear(); // Make sure you're clearing old shortcuts
+
+        // If the JSON contains goto_character we pull it out
         if (jsonData.find("goto_character") != jsonData.end()) {
             gotochar = Utf8ToWstring(jsonData["goto_character"]);
-            gotocharenabled = true;
         }
-        else {
-            gotocharenabled = false;
-        }
+
         if (jsonData.find("start_minimized") != jsonData.end()) {
             START_MINIMIZED = jsonData["start_minimized"];
         }
@@ -442,8 +445,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             inputIndex++;
         }
         
-        // Step 3: if shortcut contains & move text cursor to it
-        if (gotocharenabled) {
+        // Step 3: if shortcut contains gotochar move text cursor to it
+        if (gotochar.length() > 0) {
             if (pendingReplacement.find(gotochar) != std::wstring::npos) {
 
                 size_t pos = pendingReplacement.length() - pendingReplacement.find(gotochar) - 1;
