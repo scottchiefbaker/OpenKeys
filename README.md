@@ -13,7 +13,7 @@ TO-DO:
 - Sign code for Windows security
 - Swaggify
 - ~~(Optional) Fix notepad glitch~~
-- Detect Multiple Instances
+- ~~Detect Multiple Instances~~
 - Only show keys in UI (not values)
 - Point at URL for JSON file
 - ~~Start minimized?~~
