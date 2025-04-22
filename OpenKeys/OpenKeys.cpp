@@ -28,6 +28,7 @@ INPUT* inputs = new INPUT[2048]();
 
 // JSON data
 std::wstring prefix;
+std::wstring gotochar;
 std::wstring version;
 std::map<std::wstring, std::wstring> shortcuts;
 
@@ -52,6 +53,7 @@ void UpdateDisplayedTextFromShortcuts() {
     displayedText =  L"Shortcuts Version: " + version + L"\n";
     displayedText += L"JSON File: " + json_path + L"\n";
     displayedText += L"Prefix Key: " + prefix + L"\n";
+    displayedText += L"Goto Char: " + gotochar + L"\n";
     displayedText += L"\n";
     displayedText += L"Shortcuts:\n";
     for (const auto& pair : shortcuts) {
@@ -70,6 +72,7 @@ void LoadDataFromJson(const std::wstring& filename) {
         nlohmann::json jsonData;
         file >> jsonData;
         prefix = Utf8ToWstring(jsonData["prefix"]);
+        gotochar = Utf8ToWstring(jsonData["goto_character"]);
         version = Utf8ToWstring(jsonData["version"]);
         shortcuts.clear(); // Make sure you're clearing old shortcuts
         if (jsonData.find("start_minimized") != jsonData.end()) {
@@ -197,8 +200,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     if (ERROR_ALREADY_EXISTS == GetLastError()) {
         return(1);
     }
-
-    // TODO: Place code here.
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -434,6 +435,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
             inputIndex++;
         }
+        
+        // Step 3: if shortcut contains & move text cursor to it
+        if (pendingReplacement.find(gotochar) != std::wstring::npos) {
+            int pos = pendingReplacement.length() - pendingReplacement.find(gotochar) - 1;
+            for (int i = 0; i < pos; i++) {
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = VK_LEFT;
+                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE;
+                inputIndex++;
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = VK_LEFT;
+                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+                inputIndex++;
+            }
+        }
+        
+        inputs[inputIndex].type = INPUT_KEYBOARD;
+        inputs[inputIndex].ki.wVk = VK_BACK;
+        inputIndex++;
+
+        inputs[inputIndex].type = INPUT_KEYBOARD;
+        inputs[inputIndex].ki.wVk = VK_BACK;
+        inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
+        inputIndex++;
 
         SendInput(inputIndex, inputs, sizeof(INPUT));
     }

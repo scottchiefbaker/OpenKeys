@@ -1,10 +1,12 @@
 {
-	"version": "25.4.20",
+	"version": "25.20.4",
 	"prefix": "`",
+	"goto_character": "^",
+	"start_minimized": false,
 	"shortcuts": {
 		"addr": "123 Main St",
-    	"gm": "good morning!",
-		"lorem": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus sed eros ut nibh tristique tempor. Nulla ut massa cursus, imperdiet tellus id, pharetra libero. Vestibulum vel eros leo. Aliquam sollicitudin diam nulla, sit amet pellentesque felis eleifend non. Integer sit amet urna semper, blandit ipsum ac, porta mi. Nam lobortis mi sit amet lacus semper, ullamcorper aliquam arcu tempor. Quisque cursus mollis auctor. Aenean laoreet purus ultrices urna vehicula, et dictum metus varius. Vestibulum pretium finibus interdum. Suspendisse dapibus, justo quis eleifend efficitur, felis tellus mollis tellus, porta laoreet diam augue a nibh. Pellentesque at leo vitae felis aliquam dapibus eget ac augue. Vivamus eu porta lacus, eu consequat libero. Sed vitae nibh eros. Fusce quis viverra velit. In dictum gravida faucibus. Mauris dignissim tellus id leo ornare euismod.",
-		"nl": "foo\nbar\n\nbaz"
+    		"gm": "good morning!",
+		"name": "Roland Baker",
+		"test": "Cursor goes ---> ^ <----"
 	}
 }

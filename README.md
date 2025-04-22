@@ -14,7 +14,7 @@ TO-DO:
 - Swaggify
 - ~~(Optional) Fix notepad glitch~~
 - ~~Detect Multiple Instances~~
-- Only show keys in UI (not values)
+- ~~Only show keys in UI (not values)~~
 - Point at URL for JSON file
 - ~~Start minimized?~~
 - New-line issues pasting into Java
