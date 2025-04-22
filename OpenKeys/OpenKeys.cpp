@@ -34,6 +34,9 @@ std::wstring pendingReplacement;
 // Global variable for path to JSON file
 std::wstring json_path;
 
+// Mutex handle
+HANDLE hHandle;
+
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
 
@@ -167,6 +170,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
+    // Code to prevent multiple instances from opening
+    LPCWSTR szUniqueNamedMutex = L"screw_shortkeys_I_aint_paying_40_bucks";
+    hHandle = CreateMutex(NULL, TRUE, szUniqueNamedMutex);
+    if (ERROR_ALREADY_EXISTS == GetLastError()) {
+        return(1);
+    }
+
     // TODO: Place code here.
 
     // Initialize global strings
@@ -207,6 +217,8 @@ void RestoreFromTray(HWND hWnd) {
     Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 void CloseWindowAndExit() {
+    ReleaseMutex(hHandle);
+    CloseHandle(hHandle);
     DeleteObject(hFont);
     Shell_NotifyIcon(NIM_DELETE, &nid);
     UnhookWindowsHookEx(hKeyboardHook);
