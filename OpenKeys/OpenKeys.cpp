@@ -23,7 +23,8 @@ HHOOK hKeyboardHook;
 std::wstring keyBuffer;
 std::wstring displayedText = L"Epic Thing!!!!";
 HFONT hFont;
-INPUT inputs[2048] = {}; // Moved to heap for data saving
+// Declare an array of 2048 inputs
+INPUT* inputs = new INPUT[2048]();
 
 // JSON data
 std::wstring prefix;
@@ -246,7 +247,9 @@ void CloseWindowAndExit() {
     DeleteObject(hFont);
     Shell_NotifyIcon(NIM_DELETE, &nid);
     UnhookWindowsHookEx(hKeyboardHook);
-    delete inputs;
+
+    // Free the memory from the inputs
+    delete[] inputs;
     PostQuitMessage(0);
 }
 
