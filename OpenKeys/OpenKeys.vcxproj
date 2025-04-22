@@ -148,6 +148,7 @@
     <ResourceCompile Include="OpenKeys.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="icon1.ico" />
     <Image Include="OpenKeys.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
