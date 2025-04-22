@@ -11,6 +11,7 @@
 
 #define MAX_LOADSTRING 100
 #define WM_TRAYICON (WM_USER + 2)
+#define START_MINIMIZED true
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
@@ -279,10 +280,15 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    //Load Shortcuts
    LoadShortcutsFromJSON(json_path);
    
-   //ShowWindow(hWnd, nCmdShow); // Don't Show on startup
+   if (!START_MINIMIZED) {
+       ShowWindow(hWnd, nCmdShow);
+   }
+
    UpdateWindow(hWnd);
 
-   MinimizeToTray(hWnd); // Start minimized in tray
+   if (START_MINIMIZED) {
+       MinimizeToTray(hWnd);
+   }
 
    return TRUE;
 }
