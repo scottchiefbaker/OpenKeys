@@ -48,10 +48,11 @@ std::wstring Utf8ToWstring(const std::string& str) {
 void UpdateDisplayedTextFromShortcuts() {
     displayedText =  L"Shortcuts Version: " + version + L"\n";
     displayedText += L"JSON File: " + json_path + L"\n";
-    displayedText += L"Prefix: " + prefix + L"\n";
+    displayedText += L"Prefix Key: " + prefix + L"\n";
+    displayedText += L"\n";
     displayedText += L"Shortcuts:\n";
     for (const auto& pair : shortcuts) {
-        displayedText += pair.first + L" → " + pair.second + L"\n";
+        displayedText += pair.first + L"\n";
     }
 }
 void LoadDataFromJson(const std::wstring& filename) {
