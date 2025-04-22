@@ -462,17 +462,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                     inputIndex++;
                 }
             }
+            inputs[inputIndex].type = INPUT_KEYBOARD;
+            inputs[inputIndex].ki.wVk = VK_BACK;
+            inputIndex++;
+
+            inputs[inputIndex].type = INPUT_KEYBOARD;
+            inputs[inputIndex].ki.wVk = VK_BACK;
+            inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
+            inputIndex++;
         }
         
-        inputs[inputIndex].type = INPUT_KEYBOARD;
-        inputs[inputIndex].ki.wVk = VK_BACK;
-        inputIndex++;
-
-        inputs[inputIndex].type = INPUT_KEYBOARD;
-        inputs[inputIndex].ki.wVk = VK_BACK;
-        inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
-        inputIndex++;
-
         SendInput(inputIndex, inputs, sizeof(INPUT));
     }
         break;
