@@ -51,6 +51,7 @@ void UpdateDisplayedTextFromShortcuts() {
     }
 }
 void LoadShortcutsFromJSON(const std::wstring& filename) {
+    shortcuts = {};
     std::ifstream file(filename);
     if (!file.is_open()) {
         displayedText = L"Failed to open " + filename;
@@ -304,6 +305,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             switch (wmId) {
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                break;
+            case IDM_REFRESH_BUTTON:
+                LoadShortcutsFromJSON(json_path);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
