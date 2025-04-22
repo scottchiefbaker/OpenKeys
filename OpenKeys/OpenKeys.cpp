@@ -11,7 +11,7 @@
 
 #define MAX_LOADSTRING 100
 #define WM_TRAYICON (WM_USER + 2)
-#define START_MINIMIZED true
+bool START_MINIMIZED = false;
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
@@ -54,7 +54,7 @@ void UpdateDisplayedTextFromShortcuts() {
         displayedText += pair.first + L" → " + pair.second + L"\n";
     }
 }
-void LoadShortcutsFromJSON(const std::wstring& filename) {
+void LoadDataFromJson(const std::wstring& filename) {
     shortcuts = {};
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -68,6 +68,9 @@ void LoadShortcutsFromJSON(const std::wstring& filename) {
         prefix = Utf8ToWstring(jsonData["prefix"]);
         version = Utf8ToWstring(jsonData["version"]);
         shortcuts.clear(); // Make sure you're clearing old shortcuts
+        if (jsonData.find("start_minimized") != jsonData.end()) {
+            START_MINIMIZED = jsonData["start_minimized"];
+        }
         for (auto& el : jsonData["shortcuts"].items()) {
             std::wstring key = Utf8ToWstring(el.key());
             std::wstring value = Utf8ToWstring(el.value().get<std::string>());
@@ -290,7 +293,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    hFont = CreateFontIndirect(&lf);
 
    //Load Shortcuts
-   LoadShortcutsFromJSON(json_path);
+   LoadDataFromJson(json_path);
    
    if (!START_MINIMIZED) {
        ShowWindow(hWnd, nCmdShow);
@@ -325,7 +328,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
             case IDM_REFRESH_BUTTON:
-                LoadShortcutsFromJSON(json_path);
+                LoadDataFromJson(json_path);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
