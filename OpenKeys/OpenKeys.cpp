@@ -109,10 +109,12 @@ std::wstring GetExecutableDirectory() {
     return fullPath; // fallback to full path if no slash found
 }
 
+// This is where the keypress is captured and compared against the list of shortcuts
 static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HC_ACTION) {
         KBDLLHOOKSTRUCT* p = (KBDLLHOOKSTRUCT*)lParam;
 
+        // Keydown event
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
             BYTE keyboardState[256];
             GetKeyboardState(keyboardState);
@@ -122,15 +124,26 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
 
             if (unicodeChar[0]) {
+                // Append this new key/char to the buffer
                 keyBuffer += towlower(unicodeChar[0]);
+                // If we're larger than 20 characters we erase the first char to keep the buffer manageable
                 if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);
 
+                // Loop through each known shortcut and see if we match
                 for (const auto& pair : shortcuts) {
                     std::wstring trigger = prefix + pair.first;
-                    if (keyBuffer.size() >= trigger.size() &&
-                        keyBuffer.compare(keyBuffer.size() - trigger.size(), trigger.size(), trigger) == 0) {
 
+                    // Make sure we have enough buffer to contain the trigger string
+                    int has_enough_buff = keyBuffer.size() >= trigger.size();
+                    if (!has_enough_buff) {
+                        continue;
+                    }
+
+                    // Compare the end of the buffer with the trigger string to see if we match this shortcut
+                    int buff_matches = keyBuffer.compare(keyBuffer.size() - trigger.size(), trigger.size(), trigger) == 0;
+                    if (buff_matches) {
                         keyBuffer.clear();
+
                         pendingReplacement = pair.second;
 
                         // Post a custom message to your main window after 1 tick
@@ -141,6 +154,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             }
         }
     }
+
     return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 }
 
