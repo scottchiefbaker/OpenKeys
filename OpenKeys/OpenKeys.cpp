@@ -418,7 +418,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
         int inputIndex = 0;
 
-        // Step 1: Backspace trigger
+        // Step 1: Erase the trigger text
         for (size_t i = 0; i < triggerLen; ++i) {
             inputs[inputIndex].type = INPUT_KEYBOARD;
             inputs[inputIndex].ki.wVk = VK_BACK;
@@ -430,7 +430,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             inputIndex++;
         }
 
-        // Step 2: Type the replacement
+        // Step 2: Type the replacement one character at a time
         for (wchar_t ch : pendingReplacement) {
             inputs[inputIndex].type = INPUT_KEYBOARD;
             inputs[inputIndex].ki.wVk = 0;
@@ -462,6 +462,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                     inputIndex++;
                 }
             }
+
+            // Remove the goto character
             inputs[inputIndex].type = INPUT_KEYBOARD;
             inputs[inputIndex].ki.wVk = VK_BACK;
             inputIndex++;
