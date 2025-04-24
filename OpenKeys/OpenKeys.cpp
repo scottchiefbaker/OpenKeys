@@ -432,18 +432,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
         // Step 2: Type the replacement one character at a time
         for (wchar_t ch : pendingReplacement) {
-            inputs[inputIndex].type = INPUT_KEYBOARD;
-            inputs[inputIndex].ki.wVk = 0;
-            inputs[inputIndex].ki.wScan = ch;
-            inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE;
-            inputIndex++;
+            if (ch == L'\n') {
+                // Press Enter key
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = VK_RETURN;
+                inputs[inputIndex].ki.dwFlags = 0;
+                inputIndex++;
 
-            inputs[inputIndex].type = INPUT_KEYBOARD;
-            inputs[inputIndex].ki.wVk = 0;
-            inputs[inputIndex].ki.wScan = ch;
-            inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
-            inputIndex++;
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = VK_RETURN;
+                inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
+                inputIndex++;
+            }
+            else {
+                // Unicode input
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = 0;
+                inputs[inputIndex].ki.wScan = ch;
+                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE;
+                inputIndex++;
+
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = 0;
+                inputs[inputIndex].ki.wScan = ch;
+                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+                inputIndex++;
+            }
         }
+
         
         // Step 3: if shortcut contains gotochar move text cursor to it
         if (gotochar.length() > 0) {
