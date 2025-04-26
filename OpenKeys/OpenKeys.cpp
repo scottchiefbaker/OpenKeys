@@ -31,7 +31,7 @@ std::wstring prefix;
 std::wstring gotochar;
 std::wstring version;
 std::map<std::wstring, std::wstring> shortcuts;
-std::string json_default_data = "{\n    \"version\": \"25.20.4\",\n    \"prefix\": \"`\",\n    \"goto_character\": \"^\",\n    \"start_minimized\": false,\n    \"shortcuts\": {\n        \"addr\": \"123 Main St\",\n        \"gm\": \"good morning!\",\n        \"omw\": \"on my way!\",\n        \"gotochar\": \"Cursor goes ---> ^ <----\",\n        \"nl\": \"Hello\\nWorld!\"    }\n}"; // Maybe find better way to write this
+std::string json_default_data = "{\n    \"version\": \"25.20.4\",\n    \"prefix\": \"`\",\n    \"goto_character\": \"^\",\n    \"start_minimized\": false,\n    \"shortcuts\": {\n        \"openkeys\": \"Welcome to OpenKeys, a free and open-source text replacement program! (type `about)\",\n        \"about\": \"OpenKeys is meant to be a free alternative to other pricey text replacement programs such as ShortKeys, and TextExpander. (type `features)\",\n        \"features\": \"This program is, for the most part, fully configurable within this json. Currently, you can change the prefix character, and set whether the program starts minimized. But my personal favorite, is what I call the Goto Character. (type `gotochar)\",\n        \"gotochar\": \"With the Goto Character feature, you can tell the program to put your text cursor in a specific spot after pasting. Instead of at the end, this shortcut will set the cursor ^ <- Here. Of course, the Goto Character is configurable. (type `newline)\",\n        \"newline\": \"This\\nProgram\\nSupports\\nNewlines!\\n(I don't know if that's impressive or not)\\n(type `github)\",\n		\"github\": \"Because this program is open-source, all of the source code is available on github (`link), feel free to make a bug report!\",\n		\"link\": \"https://github.com/feive7/OpenKeys\"\n	}\n}\n"; // Maybe find better way to write this
 
 HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
@@ -468,7 +468,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 inputIndex++;
             }
         }
-
         
         // Step 3: if shortcut contains gotochar move text cursor to it
         if (gotochar.length() > 0) {
