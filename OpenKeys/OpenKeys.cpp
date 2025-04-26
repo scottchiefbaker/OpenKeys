@@ -31,6 +31,7 @@ std::wstring prefix;
 std::wstring gotochar;
 std::wstring version;
 std::map<std::wstring, std::wstring> shortcuts;
+std::string json_default_data = "{\n    \"version\": \"25.20.4\",\n    \"prefix\": \"`\",\n    \"goto_character\": \"^\",\n    \"start_minimized\": false,\n    \"shortcuts\": {\n        \"addr\": \"123 Main St\",\n        \"gm\": \"good morning!\",\n        \"omw\": \"on my way!\",\n        \"gotochar\": \"Cursor goes ---> ^ <----\",\n        \"nl\": \"Hello\\nWorld!\"    }\n}"; // Maybe find better way to write this
 
 HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
@@ -64,12 +65,12 @@ void UpdateDisplayedTextFromShortcuts() {
         displayedText += pair.first + L"\n";
     }
 }
-void LoadDataFromJson(const std::wstring& filename) {
+bool LoadDataFromJson(const std::wstring& filename) {
     shortcuts = {};
     std::ifstream file(filename);
     if (!file.is_open()) {
         displayedText = L"Failed to open " + filename;
-        return;
+        return false; // Couldn't find file
     }
 
     try {
@@ -105,6 +106,7 @@ void LoadDataFromJson(const std::wstring& filename) {
         InvalidateRect(g_hWnd, NULL, TRUE);
         UpdateWindow(g_hWnd);
     }
+    return true; // Sucessfully found file, may or may not have been loaded. Maybe make this function return errors instead of just a bool
 }
 
 std::wstring GetExecutableDirectory() {
@@ -327,8 +329,15 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    hFont = CreateFontIndirect(&lf);
 
    //Load Shortcuts
-   LoadDataFromJson(json_path);
-   
+   bool good = LoadDataFromJson(json_path);
+   if (!good) { // If a shortcuts file is not found, create one
+       std::ofstream templateJSON("shortcuts.json");
+       templateJSON << json_default_data;
+       templateJSON.close();
+       LoadDataFromJson(json_path);
+   }
+
+
    if (!START_MINIMIZED) {
        ShowWindow(hWnd, nCmdShow);
    }

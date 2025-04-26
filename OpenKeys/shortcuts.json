@@ -1,12 +1,12 @@
 {
-	"version": "25.20.4",
-	"prefix": "`",
-	"goto_character": "^",
-	"start_minimized": false,
-	"shortcuts": {
-		"addr": "123 Main St",
-    		"gm": "good morning!",
-		"name": "Roland Baker",
-		"test": "Cursor goes ---> ^ <----"
-	}
+"version": "25.20.4",
+"prefix": "`",
+"goto_character": "^",
+"start_minimized": false,
+"shortcuts": {
+"addr": "123 Main St",
+"gm": "good morning!",
+"name": "Roland Baker",
+"test": "Cursor goes ---> ^ <----"
+}
 }
