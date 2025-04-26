@@ -2,12 +2,11 @@
 $40 for a text replacement software is dumb
 
 TO-DO:
-- Log file for button logging
-- Read JSON from URL
 - Sign code for Windows security
 - Swaggify
 - Point at URL for JSON file
-- New-line issues pasting into Java
+- ~~New-line issues pasting into Java~~
+- ~~Log file for button logging~~
 - ~~Show version in title~~
 - ~~Option to reload the JSON file in the UI~~
 - ~~Start minimized?~~
