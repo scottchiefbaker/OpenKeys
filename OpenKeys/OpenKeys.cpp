@@ -476,7 +476,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
                 size_t pos = pendingReplacement.length() - pendingReplacement.find(gotochar) - 1;
 
-                for (int i = 0; i < pos; i++) {
+                for (int i = 0; i < pos - 1; i++) {
                     inputs[inputIndex].type = INPUT_KEYBOARD;
                     inputs[inputIndex].ki.wVk = VK_LEFT;
                     inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE;
