@@ -18,6 +18,8 @@ std::wstring VERSION_STRING = L"0.1.7";
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
 
+std::ofstream LOG; // Global log file stream
+
 // Keyboard stuff
 HHOOK hKeyboardHook;
 std::wstring keyBuffer;
@@ -41,6 +43,34 @@ std::wstring json_path;
 
 // Mutex handle
 HANDLE hHandle;
+
+// Get a simple datestring suitable for putting in a log file
+std::string get_datetime_string() {
+    std::time_t now = std::time(nullptr);
+    std::tm localTime{};
+    localtime_s(&localTime, &now); // Windows
+
+    std::ostringstream oss;
+    oss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
+
+    return oss.str();
+}
+
+// Add a line to the open log file
+size_t log_line(std::string line) {
+    if (!LOG) {
+        std::cerr << "Log file not ready #52195.\n";
+        return 0;
+    }
+
+    std::string date_str = get_datetime_string() + ": ";
+
+    LOG << date_str << line << '\n';
+
+    LOG.flush();
+
+    return 1;
+}
 
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
@@ -212,6 +242,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return(1);
     }
 
+    // Open the log file
+    std::wstring log_path = GetExecutableDirectory() + L"/openkeys.log";
+    LOG.open(log_path, std::ios::app);
+
+    if (!LOG) {
+        std::cerr << "Failed to open the log file for appending.\n";
+        exit(9);
+    }
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_OPENKEYS, szWindowClass, MAX_LOADSTRING);
