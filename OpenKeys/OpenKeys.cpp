@@ -103,6 +103,9 @@ bool LoadDataFromJson(const std::wstring& filename) {
         return false; // Couldn't find file
     }
 
+    // Count how many entries we load from the JSON
+    unsigned int count = 0;
+
     try {
         nlohmann::json jsonData;
         file >> jsonData;
@@ -122,6 +125,8 @@ bool LoadDataFromJson(const std::wstring& filename) {
             std::wstring key = Utf8ToWstring(el.key());
             std::wstring value = Utf8ToWstring(el.value().get<std::string>());
             shortcuts[key] = value;
+
+            count++;
         }
 
         UpdateDisplayedTextFromShortcuts();
@@ -136,6 +141,12 @@ bool LoadDataFromJson(const std::wstring& filename) {
         InvalidateRect(g_hWnd, NULL, TRUE);
         UpdateWindow(g_hWnd);
     }
+
+    // Log how many shortcuts we found
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), "Loaded %u shortcuts from configuration", count);
+    log_line(buffer);
+
     return true; // Sucessfully found file, may or may not have been loaded. Maybe make this function return errors instead of just a bool
 }
 
@@ -190,6 +201,10 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                     int buff_matches = keyBuffer.compare(keyBuffer.size() - trigger.size(), trigger.size(), trigger) == 0;
                     if (buff_matches) {
                         keyBuffer.clear();
+
+                        char buffer[100];
+                        snprintf(buffer, sizeof(buffer), "Heard '%ls'", pair.first.c_str());
+                        log_line(buffer);
 
                         pendingReplacement = pair.second;
 
@@ -250,6 +265,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         std::cerr << "Failed to open the log file for appending.\n";
         exit(9);
     }
+
+    log_line("OpenKeys startup");
+
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_OPENKEYS, szWindowClass, MAX_LOADSTRING);
