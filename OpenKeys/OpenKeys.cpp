@@ -10,6 +10,7 @@
 #include <shellapi.h>
 
 #define MAX_LOADSTRING 100
+#define WM_SENDKEYS (WM_USER + 1)
 #define WM_TRAYICON (WM_USER + 2)
 bool START_MINIMIZED = false;
 
@@ -209,7 +210,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                         pendingReplacement = pair.second;
 
                         // Post a custom message to your main window after 1 tick
-                        PostMessage(g_hWnd, WM_USER + 1, (WPARAM)trigger.size(), 0);
+                        PostMessage(g_hWnd, WM_SENDKEYS, (WPARAM)trigger.size(), 0);
                         break;
                     }
                 }
@@ -359,8 +360,20 @@ ATOM MyRegisterClass(HINSTANCE hInstance) {
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    hInst = hInstance; // Store instance handle in our global variable
    // Create Window
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+   HWND hWnd = CreateWindowW(
+       szWindowClass,
+       szTitle,
+       WS_OVERLAPPEDWINDOW,
+       20,  // X start
+       20,  // Y start
+       800, // Window width
+       600, // Window height
+       nullptr,
+       nullptr,
+       hInstance,
+       nullptr
+   );
+
    g_hWnd = hWnd;
 
    if (!hWnd) {
@@ -427,6 +440,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
             case IDM_REFRESH_BUTTON:
+                log_line("Reloaded JSON file");
                 LoadDataFromJson(json_path);
                 break;
             case IDM_EXIT:
@@ -478,7 +492,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         CloseWindowAndExit();
     }
         break;
-    case WM_USER + 1: {
+    case WM_SENDKEYS: {
         size_t triggerLen = (size_t)wParam;
 
         int inputIndex = 0;
