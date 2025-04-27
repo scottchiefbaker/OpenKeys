@@ -189,6 +189,9 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
     if (nCode == HC_ACTION) {
         KBDLLHOOKSTRUCT* p = (KBDLLHOOKSTRUCT*)lParam;
 
+        if (p->flags & LLKHF_INJECTED) {
+            return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+        }
         // Keydown event
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
             BYTE keyboardState[256];
@@ -198,7 +201,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC);
             ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
 
-            if (unicodeChar[0]) {
+            if (unicodeChar[0] != 8) { // If character is not backspace
                 // Append this new key/char to the buffer
                 keyBuffer += towlower(unicodeChar[0]);
                 // If we're larger than 20 characters we erase the first char to keep the buffer manageable
@@ -232,6 +235,9 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                         break;
                     }
                 }
+            }
+            else { // If it IS backspace, don't add to buffer, and remove last entry
+                keyBuffer.pop_back();
             }
         }
     }
