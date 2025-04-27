@@ -18,6 +18,8 @@ std::wstring VERSION_STRING = L"0.1.7";
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
 
+std::ofstream LOG; // Global log file stream
+
 // Keyboard stuff
 HHOOK hKeyboardHook;
 std::wstring keyBuffer;
@@ -41,6 +43,34 @@ std::wstring json_path;
 
 // Mutex handle
 HANDLE hHandle;
+
+// Get a simple datestring suitable for putting in a log file
+std::string get_datetime_string() {
+    std::time_t now = std::time(nullptr);
+    std::tm localTime{};
+    localtime_s(&localTime, &now); // Windows
+
+    std::ostringstream oss;
+    oss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
+
+    return oss.str();
+}
+
+// Add a line to the open log file
+size_t log_line(std::string line) {
+    if (!LOG) {
+        std::cerr << "Log file not ready #52195.\n";
+        return 0;
+    }
+
+    std::string date_str = get_datetime_string() + ": ";
+
+    LOG << date_str << line << '\n';
+
+    LOG.flush();
+
+    return 1;
+}
 
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
@@ -73,6 +103,9 @@ bool LoadDataFromJson(const std::wstring& filename) {
         return false; // Couldn't find file
     }
 
+    // Count how many entries we load from the JSON
+    unsigned int count = 0;
+
     try {
         nlohmann::json jsonData;
         file >> jsonData;
@@ -92,6 +125,8 @@ bool LoadDataFromJson(const std::wstring& filename) {
             std::wstring key = Utf8ToWstring(el.key());
             std::wstring value = Utf8ToWstring(el.value().get<std::string>());
             shortcuts[key] = value;
+
+            count++;
         }
 
         UpdateDisplayedTextFromShortcuts();
@@ -106,6 +141,12 @@ bool LoadDataFromJson(const std::wstring& filename) {
         InvalidateRect(g_hWnd, NULL, TRUE);
         UpdateWindow(g_hWnd);
     }
+
+    // Log how many shortcuts we found
+    char buffer[100];
+    snprintf(buffer, sizeof(buffer), "Loaded %u shortcuts from configuration", count);
+    log_line(buffer);
+
     return true; // Sucessfully found file, may or may not have been loaded. Maybe make this function return errors instead of just a bool
 }
 
@@ -161,6 +202,10 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                     if (buff_matches) {
                         keyBuffer.clear();
 
+                        char buffer[100];
+                        snprintf(buffer, sizeof(buffer), "Heard '%ls'", pair.first.c_str());
+                        log_line(buffer);
+
                         pendingReplacement = pair.second;
 
                         // Post a custom message to your main window after 1 tick
@@ -211,6 +256,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     if (ERROR_ALREADY_EXISTS == GetLastError()) {
         return(1);
     }
+
+    // Open the log file
+    std::wstring log_path = GetExecutableDirectory() + L"/openkeys.log";
+    LOG.open(log_path, std::ios::app);
+
+    if (!LOG) {
+        std::cerr << "Failed to open the log file for appending.\n";
+        exit(9);
+    }
+
+    log_line("OpenKeys startup");
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
