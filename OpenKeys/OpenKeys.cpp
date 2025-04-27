@@ -439,6 +439,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
             case IDM_REFRESH_BUTTON:
+                log_line("Reloaded JSON file");
                 LoadDataFromJson(json_path);
                 break;
             case IDM_EXIT:
