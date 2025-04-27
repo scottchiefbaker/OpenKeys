@@ -3,6 +3,7 @@
     "prefix": "`",
     "goto_character": "^",
     "start_minimized": false,
+	"enable_logging": true,
     "shortcuts": {
         "openkeys": "Welcome to OpenKeys, a free and open-source text replacement program! (type `about)",
         "about": "OpenKeys is meant to be a free alternative to other pricey text replacement programs such as ShortKeys, and TextExpander. (type `features)",

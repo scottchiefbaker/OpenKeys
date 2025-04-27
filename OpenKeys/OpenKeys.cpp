@@ -1,4 +1,4 @@
-﻿#include "framework.h"
+#include "framework.h"
 #include "OpenKeys.h"
 #include <string>
 #include <random>
@@ -11,7 +11,6 @@
 
 #define MAX_LOADSTRING 100
 #define WM_TRAYICON (WM_USER + 2)
-bool START_MINIMIZED = false;
 
 std::wstring VERSION_STRING = L"0.1.7";
 
@@ -28,12 +27,16 @@ HFONT hFont;
 // Declare an array of 2048 inputs
 INPUT* inputs = new INPUT[2048]();
 
-// JSON data
+// Default JSON contents
+std::string json_default_data = "{\n    \"version\": \"25.20.4\",\n    \"prefix\": \"`\",\n    \"goto_character\": \"^\",\n    \"start_minimized\": false,\n	\"enable_logging\": true,\n    \"shortcuts\": {\n        \"openkeys\": \"Welcome to OpenKeys, a free and open-source text replacement program! (type `about)\",\n        \"about\": \"OpenKeys is meant to be a free alternative to other pricey text replacement programs such as ShortKeys, and TextExpander. (type `features)\",\n        \"features\": \"This program is, for the most part, fully configurable within this json. Currently, you can change the prefix character, and set whether the program starts minimized. But my personal favorite, is what I call the Goto Character. (type `gotochar)\",\n        \"gotochar\": \"With the Goto Character feature, you can tell the program to put your text cursor in a specific spot after pasting. Instead of at the end, this shortcut will set the cursor ^ <- Here. Of course, the Goto Character is configurable. (type `newline)\",\n        \"newline\": \"This\\nProgram\\nSupports\\nNewlines!\\n(I don't know if that's impressive or not)\\n(type `github)\",\n		\"github\": \"Because this program is open-source, all of the source code is available on github (`link), feel free to make a bug report!\",\n		\"link\": \"https://github.com/feive7/OpenKeys\"\n	}\n}"; // Maybe find better way to write this
+
+// Configurable stuff
+bool START_MINIMIZED = false;
+bool enableLogging = true;
 std::wstring prefix;
 std::wstring gotochar;
 std::wstring version;
 std::map<std::wstring, std::wstring> shortcuts;
-std::string json_default_data = "{\n    \"version\": \"25.20.4\",\n    \"prefix\": \"`\",\n    \"goto_character\": \"^\",\n    \"start_minimized\": false,\n    \"shortcuts\": {\n        \"openkeys\": \"Welcome to OpenKeys, a free and open-source text replacement program! (type `about)\",\n        \"about\": \"OpenKeys is meant to be a free alternative to other pricey text replacement programs such as ShortKeys, and TextExpander. (type `features)\",\n        \"features\": \"This program is, for the most part, fully configurable within this json. Currently, you can change the prefix character, and set whether the program starts minimized. But my personal favorite, is what I call the Goto Character. (type `gotochar)\",\n        \"gotochar\": \"With the Goto Character feature, you can tell the program to put your text cursor in a specific spot after pasting. Instead of at the end, this shortcut will set the cursor ^ <- Here. Of course, the Goto Character is configurable. (type `newline)\",\n        \"newline\": \"This\\nProgram\\nSupports\\nNewlines!\\n(I don't know if that's impressive or not)\\n(type `github)\",\n		\"github\": \"Because this program is open-source, all of the source code is available on github (`link), feel free to make a bug report!\",\n		\"link\": \"https://github.com/feive7/OpenKeys\"\n	}\n}\n"; // Maybe find better way to write this
 
 HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
@@ -128,7 +131,9 @@ bool LoadDataFromJson(const std::wstring& filename) {
 
             count++;
         }
-
+        if (jsonData.find("enable_logging") != jsonData.end()) {
+            enableLogging = jsonData["enable_logging"];
+        }
         UpdateDisplayedTextFromShortcuts();
     }
     catch (const std::exception& ex) {
@@ -143,9 +148,11 @@ bool LoadDataFromJson(const std::wstring& filename) {
     }
 
     // Log how many shortcuts we found
-    char buffer[100];
-    snprintf(buffer, sizeof(buffer), "Loaded %u shortcuts from configuration", count);
-    log_line(buffer);
+    if (enableLogging) {
+        char buffer[100];
+        snprintf(buffer, sizeof(buffer), "Loaded %u shortcuts from configuration", count);
+        log_line(buffer);
+    }
 
     return true; // Sucessfully found file, may or may not have been loaded. Maybe make this function return errors instead of just a bool
 }
@@ -202,9 +209,11 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                     if (buff_matches) {
                         keyBuffer.clear();
 
-                        char buffer[100];
-                        snprintf(buffer, sizeof(buffer), "Heard '%ls'", pair.first.c_str());
-                        log_line(buffer);
+                        if (enableLogging) {
+                            char buffer[100];
+                            snprintf(buffer, sizeof(buffer), "Heard '%ls'", pair.first.c_str());
+                            log_line(buffer);
+                        }
 
                         pendingReplacement = pair.second;
 
@@ -258,15 +267,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
 
     // Open the log file
-    std::wstring log_path = GetExecutableDirectory() + L"/openkeys.log";
-    LOG.open(log_path, std::ios::app);
+    if (enableLogging) {
+        std::wstring log_path = GetExecutableDirectory() + L"/openkeys.log";
+        LOG.open(log_path, std::ios::app);
 
-    if (!LOG) {
-        std::cerr << "Failed to open the log file for appending.\n";
-        exit(9);
+        if (!LOG) {
+            std::cerr << "Failed to open the log file for appending.\n";
+            exit(9);
+        }
+
+        log_line("OpenKeys startup. (You can disable logging by setting enable_logging to false in your JSON)");
     }
-
-    log_line("OpenKeys startup");
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
