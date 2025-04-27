@@ -8,12 +8,14 @@
 #include <filesystem>
 #include <iostream>
 #include <shellapi.h>
+#include <wininet.h>
+#pragma comment(lib, "wininet.lib")
 
 #define MAX_LOADSTRING 100
 #define WM_SENDKEYS (WM_USER + 1)
 #define WM_TRAYICON (WM_USER + 2)
 
-std::wstring VERSION_STRING = L"0.1.7";
+std::wstring VERSION_STRING = L"0.2.0";
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
@@ -63,7 +65,7 @@ std::string get_datetime_string() {
 
 // Add a line to the open log file
 size_t log_line(std::string line) {
-    if (!LOG) {
+    if (!LOG || !enableLogging) {
         std::cerr << "Log file not ready #52195.\n";
         return 0;
     }
@@ -105,31 +107,77 @@ void UpdateDisplayedTextFromShortcuts() {
         }
     }
 }
-bool LoadDataFromJson(const std::wstring& filename) {
-    shortcuts = {};
+std::string FetchURL(const std::string& url) {
+    HINTERNET hInternet = InternetOpen(L"MyApp", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    if (!hInternet) {
+        return "";
+    }
+
+    HINTERNET hFile = InternetOpenUrlA(hInternet, url.c_str(), NULL, 0, INTERNET_FLAG_RELOAD, 0);
+    if (!hFile) {
+        InternetCloseHandle(hInternet);
+        return "";
+    }
+
+    std::string result;
+    char buffer[4096];
+    DWORD bytesRead;
+
+    do {
+        if (InternetReadFile(hFile, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+            result.append(buffer, bytesRead);
+        }
+        else {
+            break;
+        }
+    } while (bytesRead > 0);
+
+    InternetCloseHandle(hFile);
+    InternetCloseHandle(hInternet);
+
+    return result;
+}
+bool isSet(nlohmann::json jsonData, std::string key) {
+    return jsonData.find(key) != jsonData.end();
+}
+nlohmann::json GetJsonFromFile(const std::wstring& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         displayedText = L"Failed to open " + filename;
         return false; // Couldn't find file
     }
-
+    nlohmann::json jsonData;
+    file >> jsonData;
+    return jsonData;
+}
+nlohmann::json GetJsonFromURL(const std::string& url) {
+    std::string f = FetchURL(url);
+    nlohmann::json jsonData = nlohmann::json::parse(f);
+    return jsonData;
+}
+bool LoadDataFromJson(nlohmann::json jsonData, bool justShortcuts = false) {
     // Count how many entries we load from the JSON
     unsigned int count = 0;
 
     try {
-        nlohmann::json jsonData;
-        file >> jsonData;
         prefix = Utf8ToWstring(jsonData["prefix"]);
         version = Utf8ToWstring(jsonData["version"]);
-        shortcuts.clear(); // Make sure you're clearing old shortcuts
 
         // If the JSON contains goto_character we pull it out
-        if (jsonData.find("goto_character") != jsonData.end()) {
-            gotochar = Utf8ToWstring(jsonData["goto_character"]);
-        }
+        if (!justShortcuts) { // this if statement is for when we are using a json from the web, because then we just want the shortcuts
+            if (isSet(jsonData, "goto_character")) {
+                gotochar = Utf8ToWstring(jsonData["goto_character"]);
+            }
 
-        if (jsonData.find("start_minimized") != jsonData.end()) {
-            START_MINIMIZED = jsonData["start_minimized"];
+            if (isSet(jsonData, "start_minimized")) {
+                START_MINIMIZED = jsonData["start_minimized"];
+            }
+            if (isSet(jsonData, "enable_logging")) {
+                enableLogging = jsonData["enable_logging"];
+            }
+            if (isSet(jsonData, "ternary")) {
+                easterEgg = true;
+            }
         }
         for (auto& el : jsonData["shortcuts"].items()) {
             std::wstring key = Utf8ToWstring(el.key());
@@ -138,18 +186,13 @@ bool LoadDataFromJson(const std::wstring& filename) {
 
             count++;
         }
-        if (jsonData.find("enable_logging") != jsonData.end()) {
-            enableLogging = jsonData["enable_logging"];
-        }
-        if (jsonData.find("ternary") != jsonData.end()) {
-            easterEgg = true;
-        }
         UpdateDisplayedTextFromShortcuts();
     }
     catch (const std::exception& ex) {
         std::string err = "JSON Parse Error: ";
         err += ex.what();
         displayedText = std::wstring(err.begin(), err.end());
+        return false;
     }
 
     if (g_hWnd) {
@@ -157,14 +200,34 @@ bool LoadDataFromJson(const std::wstring& filename) {
         UpdateWindow(g_hWnd);
     }
 
-    // Log how many shortcuts we found
-    if (enableLogging) {
-        char buffer[100];
-        snprintf(buffer, sizeof(buffer), "Loaded %u shortcuts from configuration", count);
-        log_line(buffer);
-    }
-
     return true; // Sucessfully found file, may or may not have been loaded. Maybe make this function return errors instead of just a bool
+}
+void LoadShortcuts() {
+    shortcuts.clear();
+    nlohmann::json jsonData = GetJsonFromFile(json_path);
+    bool good = LoadDataFromJson(jsonData);
+    if (!good) {
+        log_line("Json file not found, creating one...");
+        std::ofstream templateJSON("shortcuts.json");
+        templateJSON << json_default_data;
+        templateJSON.close();
+        jsonData = GetJsonFromFile(json_path);
+        LoadDataFromJson(jsonData);
+    }
+    else {
+        log_line("Json file found!");
+    }
+    if (isSet(jsonData, "external_url")) {
+        log_line("External url detected, attempting to load");
+        nlohmann::json webJson = GetJsonFromURL(jsonData["external_url"]);
+        if (webJson.empty()) {
+            log_line("Error loading Json from the web, check if the website is typed properly");
+        }
+        else {
+            LoadDataFromJson(webJson, true);
+            log_line("Json loaded successfully!");
+        }
+    }
 }
 std::string wstringToString(const std::wstring& wstr) {
     // Create a string with enough space to hold the converted characters
@@ -187,6 +250,8 @@ std::wstring GetExecutableDirectory() {
 
     return fullPath; // fallback to full path if no slash found
 }
+
+
 
 // This is where the keypress is captured and compared against the list of shortcuts
 static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -301,7 +366,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             log_line("OpenKeys started (You can disable logging by setting enable_logging to false in your json)");
         }
         log_line("OpenKeys started");
-
     }
 
     // Initialize global strings
@@ -433,14 +497,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    hFont = CreateFontIndirect(&lf);
 
    //Load Shortcuts
-   bool good = LoadDataFromJson(json_path);
-   if (!good) { // If a shortcuts file is not found, create one
-       std::ofstream templateJSON("shortcuts.json");
-       templateJSON << json_default_data;
-       templateJSON.close();
-       LoadDataFromJson(json_path);
-   }
-
+   LoadShortcuts();
 
    if (!START_MINIMIZED) {
        ShowWindow(hWnd, nCmdShow);
@@ -476,7 +533,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 break;
             case IDM_REFRESH_BUTTON:
                 log_line("Reloaded JSON file");
-                LoadDataFromJson(json_path);
+                LoadShortcuts();
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
