@@ -10,6 +10,7 @@
 #include <shellapi.h>
 
 #define MAX_LOADSTRING 100
+#define WM_SENDKEYS (WM_USER + 1)
 #define WM_TRAYICON (WM_USER + 2)
 bool START_MINIMIZED = false;
 
@@ -209,7 +210,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                         pendingReplacement = pair.second;
 
                         // Post a custom message to your main window after 1 tick
-                        PostMessage(g_hWnd, WM_USER + 1, (WPARAM)trigger.size(), 0);
+                        PostMessage(g_hWnd, WM_SENDKEYS, (WPARAM)trigger.size(), 0);
                         break;
                     }
                 }
@@ -491,7 +492,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         CloseWindowAndExit();
     }
         break;
-    case WM_USER + 1: {
+    case WM_SENDKEYS: {
         size_t triggerLen = (size_t)wParam;
 
         int inputIndex = 0;
