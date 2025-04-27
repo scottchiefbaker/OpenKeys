@@ -33,6 +33,7 @@ std::string json_default_data = "{\n    \"version\": \"25.20.4\",\n    \"prefix\
 // Configurable stuff
 bool START_MINIMIZED = false;
 bool enableLogging = true;
+bool easterEgg = false;
 std::wstring prefix;
 std::wstring gotochar;
 std::wstring version;
@@ -84,18 +85,23 @@ std::wstring Utf8ToWstring(const std::string& str) {
     return result;
 }
 void UpdateDisplayedTextFromShortcuts() {
-    displayedText =  L"Shortcuts Version: " + version + L"\n";
-    displayedText += L"JSON File: " + json_path + L"\n";
-    displayedText += L"Prefix Key: " + prefix + L"\n";
-
-    if (gotochar.length() > 0) {
-        displayedText += L"Goto Char: " + gotochar + L"\n";
+    if (easterEgg) {
+        displayedText = L"Ok, so literally, we've all been held back by the binary computer. Each bit can only be on or off. The only benefit of this is that when sending data wirelessly, there is a 0.0000001% chance of any bit to change. But when it comes to local computations or data storage, ternary is a superior option. I'm no computer scientist, but I'm pretty sure creating nano-tech to read whether a bit is on, off, or in-between seems not super complicated. If we did this, we could store 8192 binary bits in 1518 ternary bits. The only reason we haven't done this, is the standardization of binary processors and storage methods. We as a society only continue to improve the binary computer while completely ignoring the next best computing method.";
     }
+    else {
+        displayedText = L"Shortcuts Version: " + version + L"\n";
+        displayedText += L"JSON File: " + json_path + L"\n";
+        displayedText += L"Prefix Key: " + prefix + L"\n";
 
-    displayedText += L"\n";
-    displayedText += L"Shortcuts:\n";
-    for (const auto& pair : shortcuts) {
-        displayedText += pair.first + L"\n";
+        if (gotochar.length() > 0) {
+            displayedText += L"Goto Char: " + gotochar + L"\n";
+        }
+
+        displayedText += L"\n";
+        displayedText += L"Shortcuts:\n";
+        for (const auto& pair : shortcuts) {
+            displayedText += pair.first + L"\n";
+        }
     }
 }
 bool LoadDataFromJson(const std::wstring& filename) {
@@ -133,6 +139,9 @@ bool LoadDataFromJson(const std::wstring& filename) {
         }
         if (jsonData.find("enable_logging") != jsonData.end()) {
             enableLogging = jsonData["enable_logging"];
+        }
+        if (jsonData.find("ternary") != jsonData.end()) {
+            easterEgg = true;
         }
         UpdateDisplayedTextFromShortcuts();
     }
