@@ -17,5 +17,5 @@ TO-DO:
 - ~~Add custom trigger key~~
 - ~~Minimize to tray~~
 - ~~Add swag icon~~
-- Make backspace delete the last char in buffer to allow error correction
+- ~~Make backspace delete the last char in buffer to allow error correction~~
 - Add simple shortcut adder to GUI
