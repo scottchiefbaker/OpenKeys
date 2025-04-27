@@ -19,3 +19,4 @@ TO-DO:
 - ~~Add swag icon~~
 - ~~Make backspace delete the last char in buffer to allow error correction~~
 - Add simple shortcut adder to GUI
+- Fix some programs not moving cursor to gotochar to the right place
