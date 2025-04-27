@@ -148,7 +148,9 @@
     <ResourceCompile Include="OpenKeys.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="Bitmap.bmp" />
     <Image Include="icon1.ico" />
+    <Image Include="Image.jpg" />
     <Image Include="OpenKeys.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
