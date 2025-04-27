@@ -166,7 +166,11 @@ bool LoadDataFromJson(const std::wstring& filename) {
 
     return true; // Sucessfully found file, may or may not have been loaded. Maybe make this function return errors instead of just a bool
 }
-
+std::string wstringToString(const std::wstring& wstr) {
+    // Create a string with enough space to hold the converted characters
+    std::string str(wstr.begin(), wstr.end());
+    return str;
+}
 std::wstring GetExecutableDirectory() {
     wchar_t path[MAX_PATH];
     DWORD length = GetModuleFileNameW(NULL, path, MAX_PATH);
@@ -285,6 +289,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Open the log file
     if (enableLogging) {
         std::wstring log_path = GetExecutableDirectory() + L"/openkeys.log";
+        std::ifstream f(wstringToString(log_path.c_str()));
         LOG.open(log_path, std::ios::app);
 
         if (!LOG) {
@@ -292,7 +297,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             exit(9);
         }
 
-        log_line("OpenKeys startup. (You can disable logging by setting enable_logging to false in your JSON)");
+        if (!f.good()) {
+            log_line("OpenKeys started (You can disable logging by setting enable_logging to false in your json)");
+        }
+        log_line("OpenKeys started");
+
     }
 
     // Initialize global strings
