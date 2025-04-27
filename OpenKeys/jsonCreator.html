@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OpenKeys JSON Editor</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 8px; text-align: left; }
+    input[type="text"] { width: 100%; }
+    .btn { margin-top: 15px; padding: 10px 15px; }
+    textarea { width: 100%; height: 300px; margin-top: 15px; }
+  </style>
+</head>
+<body>
+
+<h1>OpenKeys JSON Editor</h1>
+
+<label>Version: <input type="text" id="version" value="25.20.4"></label><br><br>
+<label>Prefix: <input type="text" id="prefix" value="`"></label><br><br>
+<label>Goto Character: <input type="text" id="gotochar" value="^"></label><br><br>
+<label>Start Minimized: <input type="checkbox" id="start_minimized"></label><br><br>
+<label>Enable Logging: <input type="checkbox" id="enable_logging" checked></label>
+
+<h2>Shortcuts</h2>
+<table id="shortcuts">
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>Value</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Shortcut rows go here -->
+  </tbody>
+</table>
+<button onclick="addShortcut()" class="btn">Add Shortcut</button>
+
+<br><br>
+<button onclick="generateJSON()" class="btn">Generate JSON</button>
+
+<h2>Result</h2>
+<textarea id="output" readonly></textarea>
+
+<script>
+// Preload initial shortcuts
+const initialShortcuts = {
+  "openkeys": "Welcome to OpenKeys, a free and open-source text replacement program! (type `about)",
+  "about": "OpenKeys is meant to be a free alternative to other pricey text replacement programs such as ShortKeys, and TextExpander. (type `features)",
+  "features": "This program is, for the most part, fully configurable within this json. Currently, you can change the prefix character, and set whether the program starts minimized. But my personal favorite, is what I call the Goto Character. (type `gotochar)",
+  "gotochar": "With the Goto Character feature, you can tell the program to put your text cursor in a specific spot after pasting. Instead of at the end, this shortcut will set the cursor ^ <- Here. Of course, the Goto Character is configurable. (type `newline)",
+  "newline": "This\nProgram\nSupports\nNewlines!\n(I don't know if that's impressive or not)\n(type `github)",
+  "github": "Because this program is open-source, all of the source code is available on github (`link), feel free to make a bug report!",
+  "link": "https://github.com/feive7/OpenKeys"
+};
+
+// Load initial shortcuts
+window.onload = function() {
+  const tbody = document.querySelector('#shortcuts tbody');
+  for (const [key, value] of Object.entries(initialShortcuts)) {
+    addShortcutRow(key, value);
+  }
+  var timestamp = "";
+  var date = new Date(Date.now());
+  var year = date.getFullYear();
+  var month = date.getMonth() + 1;
+  var day = date.getDate();
+  document.getElementById('version').value = year + "." + month + "." + day;
+};
+
+function addShortcutRow(key = '', value = '') {
+  const tbody = document.querySelector('#shortcuts tbody');
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td><input type="text" value="${key}"></td>
+    <td><input type="text" value="${value}"></td>
+    <td><button onclick="this.parentElement.parentElement.remove()">Delete</button></td>
+  `;
+  tbody.appendChild(row);
+}
+
+function addShortcut() {
+  addShortcutRow();
+}
+
+function generateJSON() {
+  const version = document.getElementById('version').value;
+  const prefix = document.getElementById('prefix').value;
+  const gotochar = document.getElementById('gotochar').value;
+  const startMinimized = document.getElementById('start_minimized').checked;
+  const enableLogging = document.getElementById('enable_logging').checked;
+
+  const shortcuts = {};
+  const rows = document.querySelectorAll('#shortcuts tbody tr');
+  rows.forEach(row => {
+    const key = row.children[0].querySelector('input').value.trim();
+    const value = row.children[1].querySelector('input').value.trim();
+    if (key) shortcuts[key] = value;
+  });
+
+  const output = {
+    version,
+    prefix,
+    goto_character: gotochar,
+    start_minimized: startMinimized,
+    enable_logging: enableLogging,
+    shortcuts
+  };
+
+  document.getElementById('output').value = JSON.stringify(output, null, 4);
+}
+</script>
+
+</body>
+</html>
