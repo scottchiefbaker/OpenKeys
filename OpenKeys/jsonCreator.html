@@ -10,7 +10,15 @@
     th, td { padding: 8px; text-align: left; }
     input[type="text"] { width: 100%; }
     .btn { margin-top: 15px; padding: 10px 15px; }
-    textarea { width: 100%; height: 300px; margin-top: 15px; }
+    #output { width: 100%; height: 300px; margin-top: 15px; }
+    textarea {
+        width: 300px;
+        height: 50px;
+        transition: height 0.5s;
+    }
+    textarea:focus {
+        height: 200px;
+    }
   </style>
 </head>
 <body>
@@ -51,7 +59,7 @@ const initialShortcuts = {
   "about": "OpenKeys is meant to be a free alternative to other pricey text replacement programs such as ShortKeys, and TextExpander. (type `features)",
   "features": "This program is, for the most part, fully configurable within this json. Currently, you can change the prefix character, and set whether the program starts minimized. But my personal favorite, is what I call the Goto Character. (type `gotochar)",
   "gotochar": "With the Goto Character feature, you can tell the program to put your text cursor in a specific spot after pasting. Instead of at the end, this shortcut will set the cursor ^ <- Here. Of course, the Goto Character is configurable. (type `newline)",
-  "newline": "This\nProgram\nSupports\nNewlines!\n(I don't know if that's impressive or not)\n(type `github)",
+  "newline": "This\\nProgram\\nSupports\\nNewlines!\\n(I don't know if that's impressive or not)\\n(type `github)",
   "github": "Because this program is open-source, all of the source code is available on github (`link), feel free to make a bug report!",
   "link": "https://github.com/feive7/OpenKeys"
 };
@@ -75,7 +83,7 @@ function addShortcutRow(key = '', value = '') {
   const row = document.createElement('tr');
   row.innerHTML = `
     <td><input type="text" value="${key}"></td>
-    <td><input type="text" value="${value}"></td>
+    <td><textarea type="text">${value}</textarea>
     <td><button onclick="this.parentElement.parentElement.remove()">Delete</button></td>
   `;
   tbody.appendChild(row);
