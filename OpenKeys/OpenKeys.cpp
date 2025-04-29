@@ -14,9 +14,9 @@
 #define MAX_LOADSTRING 100
 #define WM_SENDKEYS (WM_USER + 1)
 #define WM_TRAYICON (WM_USER + 2)
-#define MAX_INPUT_LEN 10240
+#define MAX_CHAR_LENGTH 10240
 
-std::wstring VERSION_STRING = L"0.2.1";
+std::wstring VERSION_STRING = L"0.1.7";
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
@@ -28,8 +28,8 @@ HHOOK hKeyboardHook;
 std::wstring keyBuffer;
 std::wstring displayedText = L"Epic Thing!!!!";
 HFONT hFont;
-// Declare an array of 2048 inputs
-INPUT* inputs = new INPUT[MAX_INPUT_LEN]();
+// Declare an array of MAX_CHAR_LENGTH inputs
+INPUT* inputs = new INPUT[MAX_CHAR_LENGTH]();
 
 // Default JSON contents
 std::string json_default_data = "{\n    \"version\": \"25.20.4\",\n    \"prefix\": \"`\",\n    \"goto_character\": \"^\",\n    \"start_minimized\": false,\n    \"enable_logging\": true,\n    \"shortcuts\": {\n        \"openkeys\": \"Welcome to OpenKeys, a free and open-source text replacement program! (type `about)\",\n        \"about\": \"OpenKeys is meant to be a free alternative to other pricey text replacement programs such as ShortKeys, and TextExpander. (type `features)\",\n        \"features\": \"This program is, for the most part, fully configurable within this json. Currently, you can change the prefix character, and set whether the program starts minimized. But my personal favorite, is what I call the Goto Character. (type `gotochar)\",\n        \"gotochar\": \"With the Goto Character feature, you can tell the program to put your text cursor in a specific spot after pasting. Instead of at the end, this shortcut will set the cursor ^ <- Here. Of course, the Goto Character is configurable. (type `newline)\",\n        \"newline\": \"This\\nProgram\\nSupports\\nNewlines!\\n(I don't know if that's impressive or not)\\n(type `github)\",\n		\"github\": \"Because this program is open-source, all of the source code is available on github (`link), feel free to make a bug report!\",\n		\"link\": \"https://github.com/feive7/OpenKeys\"\n	}\n}"; // Maybe find better way to write this
@@ -66,7 +66,7 @@ std::string get_datetime_string() {
 
 // Add a line to the open log file
 size_t log_line(std::string line) {
-    if (!LOG || !enableLogging) {
+    if (!LOG) {
         std::cerr << "Log file not ready #52195.\n";
         return 0;
     }
@@ -108,11 +108,10 @@ void UpdateDisplayedTextFromShortcuts() {
         }
     }
 }
-std::string FetchURL(const std::string& url) {
-    HINTERNET hInternet = InternetOpen(L"MyApp", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
-    if (!hInternet) {
+std::string DownloadJsonFromURL(const std::string& url) {
+    HINTERNET hInternet = InternetOpen(L"OpenKeys", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+    if (!hInternet)
         return "";
-    }
 
     HINTERNET hFile = InternetOpenUrlA(hInternet, url.c_str(), NULL, 0, INTERNET_FLAG_RELOAD, 0);
     if (!hFile) {
@@ -120,90 +119,88 @@ std::string FetchURL(const std::string& url) {
         return "";
     }
 
-    std::string result;
+    std::string data;
     char buffer[4096];
     DWORD bytesRead;
-
-    do {
-        if (InternetReadFile(hFile, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
-            result.append(buffer, bytesRead);
-        }
-        else {
-            break;
-        }
-    } while (bytesRead > 0);
+    while (InternetReadFile(hFile, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+        data.append(buffer, bytesRead);
+    }
 
     InternetCloseHandle(hFile);
     InternetCloseHandle(hInternet);
 
-    return result;
+    return data;
 }
-bool isSet(nlohmann::json jsonData, std::string key) {
-    return jsonData.find(key) != jsonData.end();
+void LoadJson(const std::string& jsonContent)  {
+    nlohmann::json keyData = nlohmann::json::parse(jsonContent, nullptr, false);
+    if (keyData.is_discarded())
+        return;
+    for (auto& el : keyData["shortcuts"].items()) {
+        std::wstring key = Utf8ToWstring(el.key());
+        std::wstring value = Utf8ToWstring(el.value().get<std::string>());
+        shortcuts[key] = value;
+    }
 }
-nlohmann::json GetJsonFromFile(const std::wstring& filename) {
+
+void LoadJsonKeysFromURL(const std::string& url) {
+    std::string jsonContent = DownloadJsonFromURL(url);
+    if (!jsonContent.empty()) {
+        LoadJson(jsonContent);
+    }
+    UpdateDisplayedTextFromShortcuts();
+}
+
+bool LoadDataFromJson(const std::wstring& filename) {
+    shortcuts = {};
     std::ifstream file(filename);
     if (!file.is_open()) {
         displayedText = L"Failed to open " + filename;
         return false; // Couldn't find file
     }
-    nlohmann::json jsonData;
-    file >> jsonData;
-    return jsonData;
-}
-nlohmann::json GetJsonFromURL(const std::string& url) {
-    std::string f = FetchURL(url);
-    nlohmann::json jsonData = nlohmann::json::parse(f);
-    return jsonData;
-}
-bool LoadDataFromJson(nlohmann::json jsonData, bool justShortcuts = false) {
+
     // Count how many entries we load from the JSON
     unsigned int count = 0;
 
     try {
+        nlohmann::json jsonData;
+        file >> jsonData;
         prefix = Utf8ToWstring(jsonData["prefix"]);
         version = Utf8ToWstring(jsonData["version"]);
+        shortcuts.clear(); // Make sure you're clearing old shortcuts
 
         // If the JSON contains goto_character we pull it out
-        if (!justShortcuts) { // this if statement is for when we are using a json from the web, because then we just want the shortcuts
-            if (isSet(jsonData, "goto_character")) {
-                gotochar = Utf8ToWstring(jsonData["goto_character"]);
-            }
-
-            if (isSet(jsonData, "start_minimized")) {
-                START_MINIMIZED = jsonData["start_minimized"];
-            }
-            if (isSet(jsonData, "enable_logging")) {
-                enableLogging = jsonData["enable_logging"];
-            }
-            if (isSet(jsonData, "ternary")) {
-                easterEgg = true;
-            }
+        if (jsonData.find("goto_character") != jsonData.end()) {
+            gotochar = Utf8ToWstring(jsonData["goto_character"]);
         }
 
-        // Loop through each shortcut and pull them out
+        if (jsonData.find("start_minimized") != jsonData.end()) {
+            START_MINIMIZED = jsonData["start_minimized"];
+        }
         for (auto& el : jsonData["shortcuts"].items()) {
             std::wstring key   = Utf8ToWstring(el.key());
             std::wstring value = Utf8ToWstring(el.value().get<std::string>());
 
-            if (value.length() > MAX_INPUT_LEN / 3) {
-                char buffer[100];
-                snprintf(buffer, sizeof(buffer), "Shortcut '%ls' is too long... skipping", key.c_str());
-                log_line(buffer);
-            } else {
-                shortcuts[key] = value;
+            if (value.length() > MAX_CHAR_LENGTH / 2) {
+                log_line(std::to_string(value.length()));
             }
-
+            else {
+                
+            }
+            shortcuts[key] = value;
             count++;
         }
-
+        if (jsonData.find("enable_logging") != jsonData.end()) {
+            enableLogging = jsonData["enable_logging"];
+        }
+        if (jsonData.find("ternary") != jsonData.end()) {
+            easterEgg = true;
+        }
         UpdateDisplayedTextFromShortcuts();
     }
     catch (const std::exception& ex) {
         std::string err = "JSON Parse Error: ";
         err += ex.what();
         displayedText = std::wstring(err.begin(), err.end());
-        return false;
     }
 
     if (g_hWnd) {
@@ -211,34 +208,14 @@ bool LoadDataFromJson(nlohmann::json jsonData, bool justShortcuts = false) {
         UpdateWindow(g_hWnd);
     }
 
+    // Log how many shortcuts we found
+    if (enableLogging) {
+        char buffer[100];
+        snprintf(buffer, sizeof(buffer), "Loaded %u shortcuts from configuration", count);
+        log_line(buffer);
+    }
+
     return true; // Sucessfully found file, may or may not have been loaded. Maybe make this function return errors instead of just a bool
-}
-void LoadShortcuts() {
-    shortcuts.clear();
-    nlohmann::json jsonData = GetJsonFromFile(json_path);
-    bool good = LoadDataFromJson(jsonData);
-    if (!good) {
-        log_line("Json file not found, creating one...");
-        std::ofstream templateJSON("shortcuts.json");
-        templateJSON << json_default_data;
-        templateJSON.close();
-        jsonData = GetJsonFromFile(json_path);
-        LoadDataFromJson(jsonData);
-    }
-    else {
-        log_line("Json file found!");
-    }
-    if (isSet(jsonData, "external_url")) {
-        log_line("External url detected, attempting to load");
-        nlohmann::json webJson = GetJsonFromURL(jsonData["external_url"]);
-        if (webJson.empty()) {
-            log_line("Error loading Json from the web, check if the website is typed properly");
-        }
-        else {
-            LoadDataFromJson(webJson, true);
-            log_line("Json loaded successfully!");
-        }
-    }
 }
 std::string wstringToString(const std::wstring& wstr) {
     // Create a string with enough space to hold the converted characters
@@ -261,8 +238,6 @@ std::wstring GetExecutableDirectory() {
 
     return fullPath; // fallback to full path if no slash found
 }
-
-
 
 // This is where the keypress is captured and compared against the list of shortcuts
 static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -377,6 +352,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             log_line("OpenKeys started (You can disable logging by setting enable_logging to false in your json)");
         }
         log_line("OpenKeys started");
+
     }
 
     // Initialize global strings
@@ -508,7 +484,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    hFont = CreateFontIndirect(&lf);
 
    //Load Shortcuts
-   LoadShortcuts();
+   //LoadJsonKeysFromURL("https://www.perturb.org/tmp/shortcuts.json");
+   LoadDataFromJson(json_path);
 
    if (!START_MINIMIZED) {
        ShowWindow(hWnd, nCmdShow);
@@ -544,7 +521,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 break;
             case IDM_REFRESH_BUTTON:
                 log_line("Reloaded JSON file");
-                LoadShortcuts();
+                LoadDataFromJson(json_path);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
@@ -639,6 +616,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 inputs[inputIndex].ki.wScan = ch;
                 inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
                 inputIndex++;
+            }
+
+            if (inputIndex > MAX_CHAR_LENGTH) {
+                log_line(std::to_string(inputIndex) + " err #26694");
+                exit(26);
             }
         }
         
