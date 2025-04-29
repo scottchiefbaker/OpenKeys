@@ -15,7 +15,7 @@
 #define WM_SENDKEYS (WM_USER + 1)
 #define WM_TRAYICON (WM_USER + 2)
 
-std::wstring VERSION_STRING = L"0.2.0";
+std::wstring VERSION_STRING = L"0.2.1";
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
