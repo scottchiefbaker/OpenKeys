@@ -14,6 +14,7 @@
 #define MAX_LOADSTRING 100
 #define WM_SENDKEYS (WM_USER + 1)
 #define WM_TRAYICON (WM_USER + 2)
+#define MAX_INPUT_LEN 10240
 
 std::wstring VERSION_STRING = L"0.2.1";
 
@@ -28,7 +29,7 @@ std::wstring keyBuffer;
 std::wstring displayedText = L"Epic Thing!!!!";
 HFONT hFont;
 // Declare an array of 2048 inputs
-INPUT* inputs = new INPUT[2048]();
+INPUT* inputs = new INPUT[MAX_INPUT_LEN]();
 
 // Default JSON contents
 std::string json_default_data = "{\n    \"version\": \"25.20.4\",\n    \"prefix\": \"`\",\n    \"goto_character\": \"^\",\n    \"start_minimized\": false,\n    \"enable_logging\": true,\n    \"shortcuts\": {\n        \"openkeys\": \"Welcome to OpenKeys, a free and open-source text replacement program! (type `about)\",\n        \"about\": \"OpenKeys is meant to be a free alternative to other pricey text replacement programs such as ShortKeys, and TextExpander. (type `features)\",\n        \"features\": \"This program is, for the most part, fully configurable within this json. Currently, you can change the prefix character, and set whether the program starts minimized. But my personal favorite, is what I call the Goto Character. (type `gotochar)\",\n        \"gotochar\": \"With the Goto Character feature, you can tell the program to put your text cursor in a specific spot after pasting. Instead of at the end, this shortcut will set the cursor ^ <- Here. Of course, the Goto Character is configurable. (type `newline)\",\n        \"newline\": \"This\\nProgram\\nSupports\\nNewlines!\\n(I don't know if that's impressive or not)\\n(type `github)\",\n		\"github\": \"Because this program is open-source, all of the source code is available on github (`link), feel free to make a bug report!\",\n		\"link\": \"https://github.com/feive7/OpenKeys\"\n	}\n}"; // Maybe find better way to write this
@@ -179,13 +180,23 @@ bool LoadDataFromJson(nlohmann::json jsonData, bool justShortcuts = false) {
                 easterEgg = true;
             }
         }
+
+        // Loop through each shortcut and pull them out
         for (auto& el : jsonData["shortcuts"].items()) {
-            std::wstring key = Utf8ToWstring(el.key());
+            std::wstring key   = Utf8ToWstring(el.key());
             std::wstring value = Utf8ToWstring(el.value().get<std::string>());
-            shortcuts[key] = value;
+
+            if (value.length() > MAX_INPUT_LEN / 3) {
+                char buffer[100];
+                snprintf(buffer, sizeof(buffer), "Shortcut '%ls' is too long... skipping", key.c_str());
+                log_line(buffer);
+            } else {
+                shortcuts[key] = value;
+            }
 
             count++;
         }
+
         UpdateDisplayedTextFromShortcuts();
     }
     catch (const std::exception& ex) {
