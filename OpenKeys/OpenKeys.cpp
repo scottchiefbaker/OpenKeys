@@ -351,7 +351,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
 
         if (!f.good()) {
-            log_line("OpenKeys started (You can disable logging by setting enable_logging to false in your json)");
+            log_line("Logfile created (You can disable logging by setting enable_logging to false in your json)");
         }
         log_line("OpenKeys started");
 
@@ -486,7 +486,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    hFont = CreateFontIndirect(&lf);
 
    //Load Shortcuts
-   //LoadJsonKeysFromURL("https://www.perturb.org/tmp/shortcuts.json");
+   LoadJsonKeysFromURL("https://www.perturb.org/tmp/shortcuts.json");
    bool good = LoadDataFromJson(json_path);
    if (!good) {
        std::ofstream outfile(json_path);
