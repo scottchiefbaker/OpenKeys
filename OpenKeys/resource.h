@@ -13,6 +13,7 @@
 #define IDC_OPENKEYS                    109
 #define IDR_MAINFRAME                   128
 #define IDI_ICON1                       130
+#define IDC_VERSION                     1000
 #define ID_Menu                         32771
 #define IDM_REFRESH_BUTTON              32772
 #define IDC_STATIC                      -1
@@ -24,7 +25,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32774
-#define _APS_NEXT_CONTROL_VALUE         1000
+#define _APS_NEXT_CONTROL_VALUE         1001
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
