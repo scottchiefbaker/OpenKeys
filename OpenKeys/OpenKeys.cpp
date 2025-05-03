@@ -292,7 +292,9 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                 }
             }
             else { // If it IS backspace, don't add to buffer, and remove last entry
-                keyBuffer.pop_back();
+                if(keyBuffer.size() > 0) {
+                    keyBuffer.pop_back();
+				}
             }
         }
     }
@@ -485,7 +487,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 
    //Load Shortcuts
    //LoadJsonKeysFromURL("https://www.perturb.org/tmp/shortcuts.json");
-   LoadDataFromJson(json_path);
+   bool good = LoadDataFromJson(json_path);
+   if (!good) {
+       std::ofstream outfile(json_path);
+       outfile << json_default_data << std::endl;
+       outfile.close();
+       LoadDataFromJson(json_path);
+   }
 
    if (!START_MINIMIZED) {
        ShowWindow(hWnd, nCmdShow);
