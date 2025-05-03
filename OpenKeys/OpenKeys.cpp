@@ -16,7 +16,7 @@
 #define WM_TRAYICON (WM_USER + 2)
 #define MAX_CHAR_LENGTH 10240
 
-std::wstring VERSION_STRING = L"0.1.7";
+std::wstring VERSION_STRING = L"0.2.1";
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
@@ -688,6 +688,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     switch (message) {
     case WM_INITDIALOG:
+        SetDlgItemText(hDlg, IDC_VERSION, (L"Version " + VERSION_STRING).c_str());
         return (INT_PTR)TRUE;
 
     case WM_COMMAND:
