@@ -52,6 +52,10 @@ std::wstring json_path;
 // Mutex handle
 HANDLE hHandle;
 
+// Flags
+bool JSON_FILE_LOADED = false;
+bool JSON_URL_LOADED = false;
+
 // Get a simple datestring suitable for putting in a log file
 std::string get_datetime_string() {
     std::time_t now = std::time(nullptr);
@@ -89,22 +93,28 @@ std::wstring Utf8ToWstring(const std::string& str) {
     return result;
 }
 void UpdateDisplayedTextFromShortcuts() {
+    displayedText = L"";
     if (easterEgg) {
-        displayedText = L"Ok, so literally, we've all been held back by the binary computer. Each bit can only be on or off. The only benefit of this is that when sending data wirelessly, there is a 0.0000001% chance of any bit to change. But when it comes to local computations or data storage, ternary is a superior option. I'm no computer scientist, but I'm pretty sure creating nano-tech to read whether a bit is on, off, or in-between seems not super complicated. If we did this, we could store 8192 binary bits in 1518 ternary bits. The only reason we haven't done this, is the standardization of binary processors and storage methods. We as a society only continue to improve the binary computer while completely ignoring the next best computing method.";
+        displayedText += L"Ok, so literally, we've all been held back by the binary computer. Each bit can only be on or off. The only benefit of this is that when sending data wirelessly, there is a 0.0000001% chance of any bit to change. But when it comes to local computations or data storage, ternary is a superior option. I'm no computer scientist, but I'm pretty sure creating nano-tech to read whether a bit is on, off, or in-between seems not super complicated. If we did this, we could store 8192 binary bits in 1518 ternary bits. The only reason we haven't done this, is the standardization of binary processors and storage methods. We as a society only continue to improve the binary computer while completely ignoring the next best computing method.";
     }
     else {
-        displayedText = L"Shortcuts Version: " + version + L"\n";
-        displayedText += L"JSON File: " + json_path + L"\n";
-        displayedText += L"Prefix Key: " + prefix + L"\n";
+        if (JSON_FILE_LOADED) {
+            displayedText += L"Shortcuts Version: " + version + L"\n";
+            displayedText += L"JSON File: " + json_path + L"\n";
+            displayedText += L"Prefix Key: " + prefix + L"\n";
 
-        if (gotochar.length() > 0) {
-            displayedText += L"Goto Char: " + gotochar + L"\n";
+            if (gotochar.length() > 0) {
+                displayedText += L"Goto Char: " + gotochar + L"\n";
+            }
+
+            displayedText += L"\n";
+            displayedText += L"Shortcuts:\n";
+            for (const auto& pair : shortcuts) {
+                displayedText += pair.first + L"\n";
+            }
         }
-
-        displayedText += L"\n";
-        displayedText += L"Shortcuts:\n";
-        for (const auto& pair : shortcuts) {
-            displayedText += pair.first + L"\n";
+        else {
+            displayedText += L"No JSON file was loaded";
         }
     }
 }
@@ -131,96 +141,75 @@ std::string DownloadJsonFromURL(const std::string& url) {
 
     return data;
 }
-void LoadJson(const std::string& jsonContent)  {
-    nlohmann::json keyData = nlohmann::json::parse(jsonContent, nullptr, false);
-    if (keyData.is_discarded())
-        return;
-    for (auto& el : keyData["shortcuts"].items()) {
-        std::wstring key = Utf8ToWstring(el.key());
-        std::wstring value = Utf8ToWstring(el.value().get<std::string>());
-        shortcuts[key] = value;
-    }
-}
-
-void LoadJsonKeysFromURL(const std::string& url) {
-    std::string jsonContent = DownloadJsonFromURL(url);
-    if (!jsonContent.empty()) {
-        LoadJson(jsonContent);
-    }
-    UpdateDisplayedTextFromShortcuts();
-}
-
-bool LoadDataFromJson(const std::wstring& filename) {
-    shortcuts = {};
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        displayedText = L"Failed to open " + filename;
-        return false; // Couldn't find file
-    }
-
-    // Count how many entries we load from the JSON
-    unsigned int count = 0;
-
-    try {
-        nlohmann::json jsonData;
-        file >> jsonData;
-        prefix = Utf8ToWstring(jsonData["prefix"]);
-        version = Utf8ToWstring(jsonData["version"]);
-        shortcuts.clear(); // Make sure you're clearing old shortcuts
-
-        // If the JSON contains goto_character we pull it out
-        if (jsonData.find("goto_character") != jsonData.end()) {
-            gotochar = Utf8ToWstring(jsonData["goto_character"]);
-        }
-
-        if (jsonData.find("start_minimized") != jsonData.end()) {
-            START_MINIMIZED = jsonData["start_minimized"];
-        }
-        for (auto& el : jsonData["shortcuts"].items()) {
-            std::wstring key   = Utf8ToWstring(el.key());
-            std::wstring value = Utf8ToWstring(el.value().get<std::string>());
-
-            if (value.length() > MAX_CHAR_LENGTH / 2) {
-                log_line(std::to_string(value.length()));
-            }
-            else {
-                
-            }
-            shortcuts[key] = value;
-            count++;
-        }
-        if (jsonData.find("enable_logging") != jsonData.end()) {
-            enableLogging = jsonData["enable_logging"];
-        }
-        if (jsonData.find("ternary") != jsonData.end()) {
-            easterEgg = true;
-        }
-        UpdateDisplayedTextFromShortcuts();
-    }
-    catch (const std::exception& ex) {
-        std::string err = "JSON Parse Error: ";
-        err += ex.what();
-        displayedText = std::wstring(err.begin(), err.end());
-    }
-
-    if (g_hWnd) {
-        InvalidateRect(g_hWnd, NULL, TRUE);
-        UpdateWindow(g_hWnd);
-    }
-
-    // Log how many shortcuts we found
-    if (enableLogging) {
-        char buffer[100];
-        snprintf(buffer, sizeof(buffer), "Loaded %u shortcuts from configuration", count);
-        log_line(buffer);
-    }
-
-    return true; // Sucessfully found file, may or may not have been loaded. Maybe make this function return errors instead of just a bool
-}
 std::string wstringToString(const std::wstring& wstr) {
     // Create a string with enough space to hold the converted characters
     std::string str(wstr.begin(), wstr.end());
     return str;
+}
+bool JsonHasKey(nlohmann::json jsonData, std::string key) {
+    if (jsonData.find(key) != jsonData.end()) {
+        return true;
+	}
+	else {
+        return false;
+	}
+}
+nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
+    JSON_FILE_LOADED = false; // Reset the flag
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        displayedText = L"Failed to open JSON from file";
+        log_line("Failed to open file " + wstringToString(filename));
+        JSON_FILE_LOADED = false; // Couldn't find file
+        return {};
+	}
+    JSON_FILE_LOADED = true; // Could find file
+    log_line("Loaded JSON file");
+    nlohmann::json jsonData;
+    file >> jsonData;
+    return jsonData;
+}
+nlohmann::json LoadJsonFromUrl(const std::string& url) {
+    JSON_URL_LOADED = false; // Reset the flag
+	std::string jsonContent = DownloadJsonFromURL(url);
+	if (jsonContent.empty()) {
+		displayedText = L"Failed to download JSON from URL";
+        log_line("Failed to open url " + url);
+        JSON_URL_LOADED = false; // Couldn't open url
+        return {};
+	}
+    JSON_URL_LOADED = true; // Could open url
+	log_line("Loaded JSON from URL");
+	nlohmann::json jsonData = nlohmann::json::parse(jsonContent, nullptr, false);
+	return jsonData;
+}
+void LoadDataFromJson(nlohmann::json jsonData) {
+    prefix = Utf8ToWstring(jsonData["prefix"]);
+    version = Utf8ToWstring(jsonData["version"]);
+    if (JsonHasKey(jsonData, "goto_character")) {
+        gotochar = Utf8ToWstring(jsonData["goto_character"]);
+    }
+    if (JsonHasKey(jsonData, "start_minimized")) {
+        START_MINIMIZED = jsonData["start_minimized"];
+    }
+    if (JsonHasKey(jsonData, "enable_logging")) {
+        enableLogging = jsonData["enable_logging"];
+    }
+    if (JsonHasKey(jsonData, "ternary")) {
+        easterEgg = true;
+    }
+    for (auto& el : jsonData["shortcuts"].items()) {
+        std::wstring key = Utf8ToWstring(el.key());
+        std::wstring value = Utf8ToWstring(el.value().get<std::string>());
+
+        if (value.length() > MAX_CHAR_LENGTH / 2) {
+            log_line(std::to_string(value.length()));
+        }
+        else {
+
+        }
+        shortcuts[key] = value;
+    }
 }
 std::wstring GetExecutableDirectory() {
     wchar_t path[MAX_PATH];
@@ -318,7 +307,36 @@ void AddTrayIcon(HWND hWnd) {
 
     Shell_NotifyIcon(NIM_ADD, &nid);
 }
+void MinimizeToTray(HWND hWnd) {
+    ShowWindow(hWnd, SW_HIDE);
+    AddTrayIcon(hWnd);
+}
+void RestoreFromTray(HWND hWnd) {
+    ShowWindow(hWnd, SW_SHOW);
+    ShowWindow(hWnd, SW_RESTORE);
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+}
+void CloseWindowAndExit() {
+    ReleaseMutex(hHandle);
+    CloseHandle(hHandle);
+    DeleteObject(hFont);
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+    UnhookWindowsHookEx(hKeyboardHook);
 
+    // Free the memory from the inputs
+    delete[] inputs;
+    PostQuitMessage(0);
+}
+void LoadShortcuts() {
+    shortcuts.clear();
+    nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
+    if (JsonHasKey(jsonFILE, "external_url")) {
+        nlohmann::json jsonURL = LoadJsonFromUrl(jsonFILE["external_url"]);
+		LoadDataFromJson(jsonURL);
+	}
+    LoadDataFromJson(jsonFILE);
+    UpdateDisplayedTextFromShortcuts();
+}
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
@@ -389,26 +407,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int) msg.wParam;
 }
 
-void MinimizeToTray(HWND hWnd) {
-    ShowWindow(hWnd, SW_HIDE);
-    AddTrayIcon(hWnd);
-}
-void RestoreFromTray(HWND hWnd) {
-    ShowWindow(hWnd, SW_SHOW);
-    ShowWindow(hWnd, SW_RESTORE);
-    Shell_NotifyIcon(NIM_DELETE, &nid);
-}
-void CloseWindowAndExit() {
-    ReleaseMutex(hHandle);
-    CloseHandle(hHandle);
-    DeleteObject(hFont);
-    Shell_NotifyIcon(NIM_DELETE, &nid);
-    UnhookWindowsHookEx(hKeyboardHook);
 
-    // Free the memory from the inputs
-    delete[] inputs;
-    PostQuitMessage(0);
-}
 
 //
 //  FUNCTION: MyRegisterClass()
@@ -486,14 +485,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    hFont = CreateFontIndirect(&lf);
 
    //Load Shortcuts
-   LoadJsonKeysFromURL("https://www.perturb.org/tmp/shortcuts.json");
-   bool good = LoadDataFromJson(json_path);
-   if (!good) {
-       std::ofstream outfile(json_path);
-       outfile << json_default_data << std::endl;
-       outfile.close();
-       LoadDataFromJson(json_path);
-   }
+   LoadShortcuts();
 
    if (!START_MINIMIZED) {
        ShowWindow(hWnd, nCmdShow);
@@ -529,9 +521,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 break;
             case IDM_REFRESH_BUTTON:
                 log_line("Reloaded JSON file");
-                LoadDataFromJson(json_path);
+                LoadShortcuts();
                 break;
             case IDM_EXIT:
+                log_line("Exiting");
                 DestroyWindow(hWnd);
                 break;
             default:
