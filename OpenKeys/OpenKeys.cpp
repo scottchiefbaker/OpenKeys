@@ -31,8 +31,8 @@ HFONT hFont;
 // Declare an array of MAX_CHAR_LENGTH inputs
 INPUT* inputs = new INPUT[MAX_CHAR_LENGTH]();
 
-// Default JSON contents
-std::string json_default_data = "{\n    \"version\": \"25.20.4\",\n    \"prefix\": \"`\",\n    \"goto_character\": \"^\",\n    \"start_minimized\": false,\n    \"enable_logging\": true,\n    \"shortcuts\": {\n        \"openkeys\": \"Welcome to OpenKeys, a free and open-source text replacement program! (type `about)\",\n        \"about\": \"OpenKeys is meant to be a free alternative to other pricey text replacement programs such as ShortKeys, and TextExpander. (type `features)\",\n        \"features\": \"This program is, for the most part, fully configurable within this json. Currently, you can change the prefix character, and set whether the program starts minimized. But my personal favorite, is what I call the Goto Character. (type `gotochar)\",\n        \"gotochar\": \"With the Goto Character feature, you can tell the program to put your text cursor in a specific spot after pasting. Instead of at the end, this shortcut will set the cursor ^ <- Here. Of course, the Goto Character is configurable. (type `newline)\",\n        \"newline\": \"This\\nProgram\\nSupports\\nNewlines!\\n(I don't know if that's impressive or not)\\n(type `github)\",\n		\"github\": \"Because this program is open-source, all of the source code is available on github (`link), feel free to make a bug report!\",\n		\"link\": \"https://github.com/feive7/OpenKeys\"\n	}\n}"; // Maybe find better way to write this
+// Default JSON URL
+std::string json_default_url = "https://raw.githubusercontent.com/feive7/OpenKeys/refs/heads/master/OpenKeys/shortcuts.json"; // Found a better way
 
 // Configurable stuff
 bool START_MINIMIZED = false;
@@ -317,6 +317,7 @@ void RestoreFromTray(HWND hWnd) {
     Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 void CloseWindowAndExit() {
+    log_line("Closing OpenKeys...\n");
     ReleaseMutex(hHandle);
     CloseHandle(hHandle);
     DeleteObject(hFont);
@@ -331,7 +332,12 @@ void LoadShortcuts() {
     shortcuts.clear();
     nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
     if (jsonFILE.empty()) {
-        log_line("Creating default json file");
+        log_line("Downloading default JSON from github...");
+        std::string json_default_data = DownloadJsonFromURL(json_default_url);
+        if(json_default_data.empty()) {
+			log_line("Failed to download default JSON from github. Creating JSON from local data...");
+            json_default_data = R"({"prefix": "`", "version": ")" + wstringToString(VERSION_STRING) + R"(", "shortcuts": {"example": "This is an example shortcut"}})";
+		}
         std::ofstream file;
         file.open("shortcuts.json");
         file << json_default_data;
@@ -532,8 +538,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 LoadShortcuts();
                 break;
             case IDM_EXIT:
-                log_line("Exiting");
-                DestroyWindow(hWnd);
+                CloseWindowAndExit();
                 break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
