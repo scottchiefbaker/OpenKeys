@@ -16,7 +16,7 @@
 #define WM_TRAYICON (WM_USER + 2)
 #define MAX_CHAR_LENGTH 10240
 
-std::wstring VERSION_STRING = L"0.2.1";
+std::wstring VERSION_STRING = L"0.2.2";
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
@@ -330,6 +330,14 @@ void CloseWindowAndExit() {
 void LoadShortcuts() {
     shortcuts.clear();
     nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
+    if (jsonFILE.empty()) {
+        log_line("Creating default json file");
+        std::ofstream file;
+        file.open("shortcuts.json");
+        file << json_default_data;
+        file.close();
+        jsonFILE = LoadJsonFromFile(json_path);
+    }
     if (JsonHasKey(jsonFILE, "external_url")) {
         nlohmann::json jsonURL = LoadJsonFromUrl(jsonFILE["external_url"]);
 		LoadDataFromJson(jsonURL);
