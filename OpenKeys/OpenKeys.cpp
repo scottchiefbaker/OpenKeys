@@ -328,6 +328,13 @@ void CloseWindowAndExit() {
     delete[] inputs;
     PostQuitMessage(0);
 }
+void AddToStartup() {
+    std::wstring progPath = GetExecutableDirectory() + L"\\OpenKeys.exe";
+    HKEY hkey = NULL;
+    LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hkey); //Creates a key       
+    LONG status = RegSetValueEx(hkey, L"MyApp", 0, REG_SZ, (BYTE*)progPath.c_str(), (progPath.size() + 1) * sizeof(wchar_t));
+}
+
 void LoadShortcuts() {
     shortcuts.clear();
     nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
@@ -401,6 +408,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     if (!InitInstance (hInstance, nCmdShow)) {
         return FALSE;
     }
+	
+    AddToStartup();
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_OPENKEYS));
 
