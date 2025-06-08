@@ -164,7 +164,7 @@ nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
         return {};
 	}
     JSON_FILE_LOADED = true; // Could find file
-    log_line("Loaded JSON file");
+    log_line("Loaded JSON file " + wstringToString(filename));
     nlohmann::json jsonData;
     file >> jsonData;
     return jsonData;
@@ -351,8 +351,24 @@ void LoadShortcuts() {
         file.close();
         jsonFILE = LoadJsonFromFile(json_path);
     }
-    if (JsonHasKey(jsonFILE, "external_url")) {
+    if (JsonHasKey(jsonFILE, "external_url")) { // If the JSON has an external URL, we check the versions and ask to overwrite if they don't match
         nlohmann::json jsonURL = LoadJsonFromUrl(jsonFILE["external_url"]);
+        if (jsonURL["version"] != jsonFILE["version"]) {
+            int overwrite = MessageBox(NULL, L"Your local shortcuts file doesn't match the one on the url you provided. Would you like to overwrite your local file?", L"Outdated JSON", MB_ICONWARNING | MB_YESNO);
+            if (overwrite == IDYES) {
+                if (!JsonHasKey(jsonURL, "external_url")) {
+                    jsonURL["external_url"] = jsonFILE["external_url"]; // Preserve the external URL in the new JSON
+                }
+				std::ofstream file;
+				file.open("shortcuts.json");
+				file << jsonURL.dump(4); // Pretty print with 4 spaces
+				file.close();
+				log_line("Overwrote local JSON with the one from the URL");
+			}
+			else {
+				log_line("Did not overwrite local JSON, using local data");
+			}
+        }
 		LoadDataFromJson(jsonURL);
 	}
     LoadDataFromJson(jsonFILE);
