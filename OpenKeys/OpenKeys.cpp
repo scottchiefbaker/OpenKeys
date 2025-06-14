@@ -16,7 +16,7 @@
 #define WM_TRAYICON (WM_USER + 2)
 #define MAX_CHAR_LENGTH 10240
 
-std::wstring VERSION_STRING = L"0.2.3";
+std::wstring VERSION_STRING = L"0.2.4";
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
