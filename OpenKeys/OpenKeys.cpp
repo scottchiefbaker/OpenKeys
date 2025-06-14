@@ -393,6 +393,8 @@ void LoadShortcuts() {
 				file.close();
 
 				log_line("Overwrote local JSON with the one from the URL");
+
+                jsonFILE = LoadJsonFromFile(json_path); // Reload the JSON from the file
 			}
             // If the user chooses not to overwrite, we use the local JSON
 			else {
