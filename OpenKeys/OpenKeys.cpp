@@ -157,16 +157,22 @@ bool JsonHasKey(nlohmann::json jsonData, std::string key) {
 nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
     JSON_FILE_LOADED = false; // Reset the flag
     std::ifstream file(filename);
+
+    // For some reason the file won't open
     if (!file.is_open()) {
         displayedText = L"Failed to open JSON from file";
         log_line("Failed to open file " + wstringToString(filename));
         JSON_FILE_LOADED = false; // Couldn't find file
         return {};
 	}
+
     JSON_FILE_LOADED = true; // Could find file
+
     log_line("Loaded JSON file " + wstringToString(filename));
     nlohmann::json jsonData;
-    file >> jsonData;
+    file >> jsonData; 
+    file.close();
+
     return jsonData;
 }
 nlohmann::json LoadJsonFromUrl(const std::string& url) {
@@ -342,9 +348,11 @@ void LoadShortcuts() {
         log_line("Downloading default JSON from github...");
         std::string json_default_data = DownloadJsonFromURL(json_default_url);
         if(json_default_data.empty()) {
+			// If the download fails, we create a default JSON from local data
 			log_line("Failed to download default JSON from github. Creating JSON from local data...");
             json_default_data = R"({"prefix": "`", "version": ")" + wstringToString(VERSION_STRING) + R"(", "shortcuts": {"example": "This is an example shortcut"}})";
 		}
+
         std::ofstream file;
         file.open("shortcuts.json");
         file << json_default_data;
@@ -353,23 +361,34 @@ void LoadShortcuts() {
     }
     if (JsonHasKey(jsonFILE, "external_url")) { // If the JSON has an external URL, we check the versions and ask to overwrite if they don't match
         nlohmann::json jsonURL = LoadJsonFromUrl(jsonFILE["external_url"]);
+        if (jsonURL.empty()) {
+			log_line("Failed to load JSON from URL: " + jsonFILE["external_url"].get<std::string>());
+            MessageBox(NULL, L"The URL you provided does not contain valid JSON. Please verify URL.", L"Warning", MB_ICONWARNING);
+			return;
+		}
         if (jsonURL["version"] != jsonFILE["version"]) {
-            int overwrite = MessageBox(NULL, L"Your local shortcuts file doesn't match the one on the url you provided. Would you like to overwrite your local file?", L"Outdated JSON", MB_ICONWARNING | MB_YESNO);
+            int overwrite = MessageBox(NULL, L"New version of shortcuts found. Would you like to use the new version?", L"New shortcuts found", MB_ICONINFORMATION | MB_YESNO);
+            
+            // If the user chooses to overwrite, we overwrite the local JSON with the one from the URL
             if (overwrite == IDYES) {
+                // If the remote JSON does not have an external URL, we preserve the local one
                 if (!JsonHasKey(jsonURL, "external_url")) {
                     jsonURL["external_url"] = jsonFILE["external_url"]; // Preserve the external URL in the new JSON
                 }
+
+                // Write the new JSON to the local file
 				std::ofstream file;
 				file.open("shortcuts.json");
 				file << jsonURL.dump(4); // Pretty print with 4 spaces
 				file.close();
+
 				log_line("Overwrote local JSON with the one from the URL");
 			}
+            // If the user chooses not to overwrite, we use the local JSON
 			else {
 				log_line("Did not overwrite local JSON, using local data");
 			}
         }
-		LoadDataFromJson(jsonURL);
 	}
     LoadDataFromJson(jsonFILE);
     UpdateDisplayedTextFromShortcuts();
