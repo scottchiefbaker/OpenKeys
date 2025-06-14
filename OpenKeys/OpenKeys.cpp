@@ -188,6 +188,15 @@ nlohmann::json LoadJsonFromUrl(const std::string& url) {
     JSON_URL_LOADED = true; // Could open url
 	log_line("Loaded JSON from URL");
 	nlohmann::json jsonData = nlohmann::json::parse(jsonContent, nullptr, false);
+
+    // If the JSON is still invalid, throw fatal error
+    if (jsonData.is_discarded()) {
+		displayedText = L"Failed to parse JSON from URL";
+		log_line("Failed to parse JSON from URL: " + url);
+		JSON_URL_LOADED = false; // Couldn't parse json
+		return {};
+	}
+	
 	return jsonData;
 }
 void LoadDataFromJson(nlohmann::json jsonData) {
