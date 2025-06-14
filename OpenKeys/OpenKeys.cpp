@@ -184,6 +184,7 @@ nlohmann::json LoadJsonFromUrl(const std::string& url) {
         JSON_URL_LOADED = false; // Couldn't open url
         return {};
 	}
+
     JSON_URL_LOADED = true; // Could open url
 	log_line("Loaded JSON from URL");
 	nlohmann::json jsonData = nlohmann::json::parse(jsonContent, nullptr, false);
@@ -389,6 +390,7 @@ void LoadShortcuts() {
 				log_line("Did not overwrite local JSON, using local data");
 			}
         }
+
 	}
     LoadDataFromJson(jsonFILE);
     UpdateDisplayedTextFromShortcuts();
