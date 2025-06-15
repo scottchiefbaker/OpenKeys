@@ -1,8 +1,38 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Package Id="OpenKeys.test" Name="OpenKeys" Manufacturer="RolandSoft" Version="0.0.1">
-    <MediaTemplate EmbedCab="yes" />
-    <SetDirectory Id="INSTALLFOLDER" Value="[WindowsVolume]openkeys" />
-    <File Source="shortcuts.json" />
-    <File Source="openkeys.exe" />
-  </Package>
+	<Package Id="OpenKeys.test" Name="OpenKeys" Manufacturer="RolandSoft" Version="0.2.4">
+		<MediaTemplate EmbedCab="yes" />
+
+		<SetDirectory Id="INSTALLFOLDER" Value="[WindowsVolume]openkeys" />
+
+		<Directory Id="TARGETROOT" Name="WindowsVolume">
+			<Directory Id="INSTALLFOLDER" Name="openkeys">
+
+				<Component Id="OpenKeysExeComponent" Guid="*">
+					<File Source="openkeys.exe" />
+				</Component>
+
+				<Component Id="ShortcutsJsonComponent" Guid="*">
+					<File Source="shortcuts.json" />
+				</Component>
+
+				<Component Id="StartupRegistryComponent" Guid="*">
+					<RegistryValue
+						Root="HKLM"
+						Key="Software\Microsoft\Windows\CurrentVersion\Run"
+						Name="OpenKeys"
+						Value="&quot;[INSTALLFOLDER]openkeys.exe&quot;"
+						Type="string"
+						Action="write"
+					/>
+				</Component>
+
+			</Directory>
+		</Directory>
+
+		<Feature Id="ProductFeature" Title="OpenKeys" Level="1">
+			<ComponentRef Id="OpenKeysExeComponent" />
+			<ComponentRef Id="ShortcutsJsonComponent" />
+			<ComponentRef Id="StartupRegistryComponent" />
+		</Feature>
+	</Package>
 </Wix>
