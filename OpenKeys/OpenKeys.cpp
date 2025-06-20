@@ -128,7 +128,7 @@ std::string DownloadJsonFromURL(const std::string& url) {
         InternetCloseHandle(hInternet);
         return "";
     }
-
+    
     std::string data;
     char buffer[4096];
     DWORD bytesRead;
@@ -197,7 +197,7 @@ nlohmann::json LoadJsonFromUrl(const std::string& url) {
 		return {};
 	}
 	
-	return jsonData;
+    return jsonData;
 }
 void LoadDataFromJson(nlohmann::json jsonData) {
     prefix = Utf8ToWstring(jsonData["prefix"]);
@@ -261,11 +261,25 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC);
             ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
 
-            if (unicodeChar[0] != 8) { // If character is not backspace
-                // Append this new key/char to the buffer
-                keyBuffer += towlower(unicodeChar[0]);
+            if (unicodeChar[0] != 8 && unicodeChar[0] != 0) { // If character is not backspace
+
+                // I apologize in advance for the following if statement, this is probably the worst workaround I have ever made, I will attempt at explaining everything
+                // special characters are finnicky and sometimes register as their unicode value (e.g. # is 3, so we have to check for that)
+                if (unicodeChar[0] == '#') { // # is finnicky to detect, sometimes registers as a 3
+                    log_line("# detected");
+                    keyBuffer += L"`#"; // It also deletes the previous backtick specifically, so we have to re-add it
+				}
+                else if (unicodeChar[0] == '3') { // For whatever reason, windows hates me and doesn't register shift sometimes, so we have to sacrifice 3
+                    keyBuffer += L"`#"; // Screw 3, me and the homies hate the number 3
+                }
+                else {
+                    keyBuffer += unicodeChar[0]; // Otherwise proceed as normal
+                }
+                // TO-DO: make a switch-case statement for every special key or fix it in a better way
+
+
                 // If we're larger than 20 characters we erase the first char to keep the buffer manageable
-                if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);
+                if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);                 
 
                 // Loop through each known shortcut and see if we match
                 for (const auto& pair : shortcuts) {
@@ -370,6 +384,7 @@ void LoadShortcuts() {
         jsonFILE = LoadJsonFromFile(json_path);
     }
     if (JsonHasKey(jsonFILE, "external_url")) { // If the JSON has an external URL, we check the versions and ask to overwrite if they don't match
+        log_line("User provided URL: " + jsonFILE["external_url"].get<std::string>());
         nlohmann::json jsonURL = LoadJsonFromUrl(jsonFILE["external_url"]);
         if (jsonURL.empty()) {
 			log_line("Failed to load JSON from URL: " + jsonFILE["external_url"].get<std::string>());
@@ -593,6 +608,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             case IDM_REFRESH_BUTTON:
                 log_line("Reloaded JSON file");
                 LoadShortcuts();
+                UpdateDisplayedTextFromShortcuts();
                 break;
             case IDM_EXIT:
                 CloseWindowAndExit();

@@ -2,8 +2,8 @@
 
 - Swaggify
 - Sign code for Windows security
-- Point at URL for JSON file
 - Add simple shortcut adder to GUI
+- Document MSI build process
 - Fix some programs not moving cursor to gotochar to the right place
 - ~~New-line issues pasting into Java~~
 - ~~Log file for button logging~~
@@ -18,3 +18,4 @@
 - ~~Minimize to tray~~
 - ~~Add swag icon~~
 - ~~Make backspace delete the last char in buffer to allow error correction~~
+- ~~Point at URL for JSON file~~

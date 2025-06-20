@@ -8,7 +8,7 @@
 			<Directory Id="INSTALLFOLDER" Name="openkeys">
 
 				<Component Id="OpenKeysExeComponent" Guid="*">
-					<File Source="openkeys.exe" />
+					<File Source="../x64/Release/openkeys.exe" />
 				</Component>
 
 				<Component Id="ShortcutsJsonComponent" Guid="*">
