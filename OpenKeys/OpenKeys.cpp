@@ -168,10 +168,13 @@ nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
 
     JSON_FILE_LOADED = true; // Could find file
 
-    log_line("Loaded JSON file " + wstringToString(filename));
     nlohmann::json jsonData;
     file >> jsonData; 
     file.close();
+
+    std::string version = "";
+    version = jsonData.value("version", "");
+    log_line("Loaded JSON file " + wstringToString(filename) + " (version: " + version + ")");
 
     return jsonData;
 }
@@ -186,7 +189,6 @@ nlohmann::json LoadJsonFromUrl(const std::string& url) {
 	}
 
     JSON_URL_LOADED = true; // Could open url
-	log_line("Loaded JSON from URL");
 	nlohmann::json jsonData = nlohmann::json::parse(jsonContent, nullptr, false);
 
     // If the JSON is still invalid, throw fatal error
@@ -196,6 +198,10 @@ nlohmann::json LoadJsonFromUrl(const std::string& url) {
 		JSON_URL_LOADED = false; // Couldn't parse json
 		return {};
 	}
+
+    std::string version = "";
+    version = jsonData.value("version", "");
+    log_line("Loaded JSON file from URL " + url + " (version: " + version + ")");
 	
     return jsonData;
 }
