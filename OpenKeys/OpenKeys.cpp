@@ -408,10 +408,13 @@ void LoadShortcuts() {
                 }
 
                 // Write the new JSON to the local file
-				std::ofstream file;
-				file.open("shortcuts.json");
-				file << jsonURL.dump(4); // Pretty print with 4 spaces
-				file.close();
+                std::ofstream file("shortcuts.json");
+                if (file.is_open()) {
+                    file << jsonURL.dump(4); // Pretty print with 4 spaces
+                } else {
+                    log_line("Failed to open shortcuts.json for writing.");
+                }
+                file.close();
 
 				log_line("Overwrote local JSON with the one from the URL");
 
