@@ -2,13 +2,13 @@
 	<Package Id="OpenKeys.test" Name="OpenKeys" Manufacturer="RolandSoft" Version="0.2.4">
 		<MediaTemplate EmbedCab="yes" />
 
-		<SetDirectory Id="INSTALLFOLDER" Value="[WindowsVolume]openkeys" />
+		<SetDirectory Id="INSTALLFOLDER" Value="[WindowsVolume]OpenKeys" />
 
 		<Directory Id="TARGETROOT" Name="WindowsVolume">
-			<Directory Id="INSTALLFOLDER" Name="openkeys">
+			<Directory Id="INSTALLFOLDER" Name="OpenKeys">
 
 				<Component Id="OpenKeysExeComponent" Guid="*">
-					<File Source="../x64/Release/openkeys.exe" />
+					<File Source="OpenKeys.exe" />
 				</Component>
 
 				<Component Id="ShortcutsJsonComponent" Guid="*">
@@ -20,7 +20,7 @@
 						Root="HKLM"
 						Key="Software\Microsoft\Windows\CurrentVersion\Run"
 						Name="OpenKeys"
-						Value="&quot;[INSTALLFOLDER]openkeys.exe&quot;"
+						Value="&quot;[INSTALLFOLDER]OpenKeys.exe&quot;"
 						Type="string"
 						Action="write"
 					/>
