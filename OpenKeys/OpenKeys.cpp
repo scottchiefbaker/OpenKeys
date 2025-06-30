@@ -84,14 +84,28 @@ size_t log_line(std::string line) {
     return 1;
 }
 
+// Convert a UTF-8 string to a wide string
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
 
     int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), NULL, 0);
     std::wstring result(size_needed, 0);
     MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &result[0], size_needed);
+
     return result;
 }
+
+// Convert a wide string to a UTF-8 string
+std::string wstringToString(const std::wstring& wstr) {
+    if (wstr.empty()) return std::string();
+
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
+    std::string str(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), &str[0], size_needed, nullptr, nullptr);
+
+    return str;
+}
+
 void UpdateDisplayedTextFromShortcuts() {
     displayedText = L"";
     if (easterEgg) {
@@ -140,11 +154,6 @@ std::string DownloadJsonFromURL(const std::string& url) {
     InternetCloseHandle(hInternet);
 
     return data;
-}
-std::string wstringToString(const std::wstring& wstr) {
-    // Create a string with enough space to hold the converted characters
-    std::string str(wstr.begin(), wstr.end());
-    return str;
 }
 bool JsonHasKey(nlohmann::json jsonData, std::string key) {
     if (jsonData.find(key) != jsonData.end()) {
