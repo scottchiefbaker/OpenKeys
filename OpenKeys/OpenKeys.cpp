@@ -375,7 +375,7 @@ void LoadShortcuts() {
     shortcuts.clear();
     nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
     if (jsonFILE.empty()) {
-        log_line("Downloading default JSON from github...");
+        log_line("Downloading default JSON from github: " + json_default_url);
         std::string json_default_data = DownloadJsonFromURL(json_default_url);
         if(json_default_data.empty()) {
 			// If the download fails, we create a default JSON from local data
@@ -384,9 +384,17 @@ void LoadShortcuts() {
 		}
 
         std::ofstream file;
-        file.open("shortcuts.json");
+        std::wstring jsonPath = GetExecutableDirectory() + L"\\shortcuts.json";
+        file.open(jsonPath);
         file << json_default_data;
         file.close();
+
+        if (!file.good() || !std::filesystem::exists(jsonPath)) {
+            log_line("Failed to create shortcuts.json file.");
+            MessageBox(NULL, L"Failed to create shortcuts.json file. Please check permissions.", L"Error", MB_ICONERROR);
+            return;
+        }
+
         jsonFILE = LoadJsonFromFile(json_path);
     }
     if (JsonHasKey(jsonFILE, "external_url")) { // If the JSON has an external URL, we check the versions and ask to overwrite if they don't match
