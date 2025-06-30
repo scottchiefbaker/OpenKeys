@@ -260,17 +260,18 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             WCHAR unicodeChar[4] = {};
             UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC);
             ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
-
             if (unicodeChar[0] != 8 && unicodeChar[0] != 0) { // If character is not backspace
-
                 // I apologize in advance for the following if statement, this is probably the worst workaround I have ever made, I will attempt at explaining everything
                 // special characters are finnicky and sometimes register as their unicode value (e.g. # is 3, so we have to check for that)
-                if (unicodeChar[0] == '#') { // # is finnicky to detect, sometimes registers as a 3
-                    log_line("# detected");
-                    keyBuffer += L"`#"; // It also deletes the previous backtick specifically, so we have to re-add it
+                if (unicodeChar[0] == '3') { // For whatever reason, windows hates me and doesn't register shift sometimes, so we have to double check
+                    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) { // If shift is pressed, we add the special character
+						keyBuffer += L'#'; // Add the # character
+					}
 				}
-                else if (unicodeChar[0] == '3') { // For whatever reason, windows hates me and doesn't register shift sometimes, so we have to sacrifice 3
-                    keyBuffer += L"`#"; // Screw 3, me and the homies hate the number 3
+				else if (unicodeChar[0] == '4') { // Same for $ character
+                    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
+                        keyBuffer += L'$';
+                    }
                 }
                 else {
                     keyBuffer += unicodeChar[0]; // Otherwise proceed as normal
@@ -310,7 +311,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                     }
                 }
             }
-            else { // If it IS backspace, don't add to buffer, and remove last entry
+            else if(unicodeChar[0] == 8) { // If it IS backspace, don't add to buffer, and remove last entry
                 if(keyBuffer.size() > 0) {
                     keyBuffer.pop_back();
 				}
@@ -444,6 +445,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Open the log file
     if (enableLogging) {
         std::wstring log_path = GetExecutableDirectory() + L"/openkeys.log";
+        std::remove(wstringToString(log_path).c_str());
         std::ifstream f(wstringToString(log_path.c_str()));
         LOG.open(log_path, std::ios::app);
 
