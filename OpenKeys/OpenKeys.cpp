@@ -168,10 +168,13 @@ nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
 
     JSON_FILE_LOADED = true; // Could find file
 
-    log_line("Loaded JSON file " + wstringToString(filename));
     nlohmann::json jsonData;
     file >> jsonData; 
     file.close();
+
+    std::string version = "";
+    version = jsonData.value("version", "");
+    log_line("Loaded JSON file " + wstringToString(filename) + " (version: " + version + ")");
 
     return jsonData;
 }
@@ -186,7 +189,6 @@ nlohmann::json LoadJsonFromUrl(const std::string& url) {
 	}
 
     JSON_URL_LOADED = true; // Could open url
-	log_line("Loaded JSON from URL");
 	nlohmann::json jsonData = nlohmann::json::parse(jsonContent, nullptr, false);
 
     // If the JSON is still invalid, throw fatal error
@@ -196,6 +198,10 @@ nlohmann::json LoadJsonFromUrl(const std::string& url) {
 		JSON_URL_LOADED = false; // Couldn't parse json
 		return {};
 	}
+
+    std::string version = "";
+    version = jsonData.value("version", "");
+    log_line("Loaded JSON file from URL " + url + " (version: " + version + ")");
 	
     return jsonData;
 }
@@ -370,7 +376,7 @@ void LoadShortcuts() {
     shortcuts.clear();
     nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
     if (jsonFILE.empty()) {
-        log_line("Downloading default JSON from github...");
+        log_line("Downloading default JSON from github: " + json_default_url);
         std::string json_default_data = DownloadJsonFromURL(json_default_url);
         if(json_default_data.empty()) {
 			// If the download fails, we create a default JSON from local data
@@ -379,9 +385,17 @@ void LoadShortcuts() {
 		}
 
         std::ofstream file;
-        file.open("shortcuts.json");
+        std::wstring jsonPath = GetExecutableDirectory() + L"\\shortcuts.json";
+        file.open(jsonPath);
         file << json_default_data;
         file.close();
+
+        if (!file.good() || !std::filesystem::exists(jsonPath)) {
+            log_line("Failed to create shortcuts.json file.");
+            MessageBox(NULL, L"Failed to create shortcuts.json file. Please check permissions.", L"Error", MB_ICONERROR);
+            return;
+        }
+
         jsonFILE = LoadJsonFromFile(json_path);
     }
     if (JsonHasKey(jsonFILE, "external_url")) { // If the JSON has an external URL, we check the versions and ask to overwrite if they don't match
@@ -403,10 +417,13 @@ void LoadShortcuts() {
                 }
 
                 // Write the new JSON to the local file
-				std::ofstream file;
-				file.open("shortcuts.json");
-				file << jsonURL.dump(4); // Pretty print with 4 spaces
-				file.close();
+                std::ofstream file("shortcuts.json");
+                if (file.is_open()) {
+                    file << jsonURL.dump(4); // Pretty print with 4 spaces
+                } else {
+                    log_line("Failed to open shortcuts.json for writing.");
+                }
+                file.close();
 
 				log_line("Overwrote local JSON with the one from the URL");
 
@@ -473,8 +490,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     if (!InitInstance (hInstance, nCmdShow)) {
         return FALSE;
     }
-	
-    AddToStartup();
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_OPENKEYS));
 
