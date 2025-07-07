@@ -1,5 +1,5 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-	<Package Id="OpenKeys.test" Name="OpenKeys" Manufacturer="RolandSoft" Version="0.2.4">
+	<Package Id="OpenKeys.test" Name="OpenKeys" Manufacturer="RolandSoft" Version="0.2.6">
 		<MediaTemplate EmbedCab="yes" />
 
 		<SetDirectory Id="INSTALLFOLDER" Value="[WindowsVolume]OpenKeys" />
