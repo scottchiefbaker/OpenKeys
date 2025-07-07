@@ -769,7 +769,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             RestoreFromTray(hWnd);
         }
         else if (lParam == WM_RBUTTONUP) {
-            CloseWindowAndExit();
+            //CloseWindowAndExit();
+            RestoreFromTray(hWnd);
         }
     }
         break;
