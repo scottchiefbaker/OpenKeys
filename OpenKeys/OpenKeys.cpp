@@ -243,6 +243,15 @@ void LoadDataFromJson(nlohmann::json jsonData) {
         shortcuts[key] = value;
     }
 }
+
+std::wstring GetAppDataDir() {
+    // Read the %APPDATA% environment variable
+    wchar_t buffer[MAX_PATH];
+    GetEnvironmentVariableW(L"APPDATA", buffer, MAX_PATH);  // Note the 'W' suffix
+
+    return buffer;
+}
+
 std::wstring GetExecutableDirectory() {
     wchar_t path[MAX_PATH];
     DWORD length = GetModuleFileNameW(NULL, path, MAX_PATH);
@@ -471,14 +480,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Open the log file
     if (enableLogging) {
-        wchar_t buffer[MAX_PATH];
-        GetEnvironmentVariableW(L"APPDATA", buffer, MAX_PATH);  // Note the 'W' suffix
-        std::wstring appDataPath = buffer;
-
-        std::wstring log_path = appDataPath + L"\\OpenKeys\\openkeys.log";
-        std::remove(wstringToString(log_path).c_str());
+        // Open the log file in the AppData directory
+        std::wstring log_path = GetAppDataDir() + L"\\OpenKeys\\openkeys.log";
         std::ifstream f(wstringToString(log_path.c_str()));
-        LOG.open(log_path, std::ios::app);
+        LOG.open(log_path, std::ios::app); // Open the log file for APPENDING
 
         if (!LOG) {
             std::cerr << "Failed to open the log file for appending.\n";
@@ -497,13 +502,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDC_OPENKEYS, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
-	// Read the %APPDATA% environment variable to find the path to the JSON file
-    wchar_t buffer[MAX_PATH];
-    GetEnvironmentVariableW(L"APPDATA", buffer, MAX_PATH);  // Note the 'W' suffix
-    std::wstring appDataPath = buffer;
-
     // JSON file is found in %APPDATA%\OpenKeys\shortcuts.json
-    json_path = appDataPath + L"\\OpenKeys\\shortcuts.json";
+    json_path = GetAppDataDir() + L"\\OpenKeys\\shortcuts.json";
 
     // Perform application initialization:
     if (!InitInstance (hInstance, nCmdShow)) {
