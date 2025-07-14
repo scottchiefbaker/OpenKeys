@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "OpenKeys.h"
+#include <windows.h>
 #include <string>
 #include <random>
 #include <json.hpp>
@@ -387,19 +388,19 @@ void LoadShortcuts() {
     if (jsonFILE.empty()) {
         log_line("Downloading default JSON from github: " + json_default_url);
         std::string json_default_data = DownloadJsonFromURL(json_default_url);
-        if(json_default_data.empty()) {
+
+        if (json_default_data.empty()) {
 			// If the download fails, we create a default JSON from local data
 			log_line("Failed to download default JSON from github. Creating JSON from local data...");
             json_default_data = R"({"prefix": "`", "version": ")" + wstringToString(VERSION_STRING) + R"(", "shortcuts": {"example": "This is an example shortcut"}})";
 		}
 
         std::ofstream file;
-        std::wstring jsonPath = GetExecutableDirectory() + L"\\shortcuts.json";
-        file.open(jsonPath);
+        file.open(json_path);
         file << json_default_data;
         file.close();
 
-        if (!file.good() || !std::filesystem::exists(jsonPath)) {
+        if (!file.good() || !std::filesystem::exists(json_path)) {
             log_line("Failed to create shortcuts.json file.");
             MessageBox(NULL, L"Failed to create shortcuts.json file. Please check permissions.", L"Error", MB_ICONERROR);
             return;
@@ -470,7 +471,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Open the log file
     if (enableLogging) {
-        std::wstring log_path = GetExecutableDirectory() + L"/openkeys.log";
+        wchar_t buffer[MAX_PATH];
+        GetEnvironmentVariableW(L"APPDATA", buffer, MAX_PATH);  // Note the 'W' suffix
+        std::wstring appDataPath = buffer;
+
+        std::wstring log_path = appDataPath + L"\\OpenKeys\\openkeys.log";
         std::remove(wstringToString(log_path).c_str());
         std::ifstream f(wstringToString(log_path.c_str()));
         LOG.open(log_path, std::ios::app);
@@ -492,8 +497,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDC_OPENKEYS, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
-    // JSON file is found in the directory of the .exe
-    json_path = GetExecutableDirectory() + L"/shortcuts.json";
+	// Read the %APPDATA% environment variable to find the path to the JSON file
+    wchar_t buffer[MAX_PATH];
+    GetEnvironmentVariableW(L"APPDATA", buffer, MAX_PATH);  // Note the 'W' suffix
+    std::wstring appDataPath = buffer;
+
+    // JSON file is found in %APPDATA%\OpenKeys\shortcuts.json
+    json_path = appDataPath + L"\\OpenKeys\\shortcuts.json";
 
     // Perform application initialization:
     if (!InitInstance (hInstance, nCmdShow)) {
