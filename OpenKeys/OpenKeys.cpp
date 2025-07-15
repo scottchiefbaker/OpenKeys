@@ -681,7 +681,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         RECT rect; // Window Rect
         GetClientRect(hWnd, &rect);
 
-        COLORREF bgColor = RGB(173, 216, 230);
+        // Set the text color to very dark gray
+        SetTextColor(hdc, RGB(20, 20, 20));
+
+        // Fill the background with white
+        COLORREF bgColor = RGB(239, 239, 227);
         SetBkColor(hdc, bgColor);
         GetClientRect(hWnd, &rect);
         FillRect(hdc, &rect, CreateSolidBrush(bgColor));
@@ -691,9 +695,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
         // Save the current graphics state to restore it later
         int savedDC = SaveDC(hdc);
-
-        // Set the text color (for example, red)
-        SetTextColor(hdc, RGB(0, 98, 191)); // RGB for red color
 
         // Set the background mode to transparent (so background won't overwrite the text)
         SetBkMode(hdc, TRANSPARENT);
