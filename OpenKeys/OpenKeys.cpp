@@ -157,7 +157,7 @@ std::string DownloadJsonFromURL(const std::string& url) {
         InternetCloseHandle(hInternet);
         return "";
     }
-    
+
     std::string data;
     char buffer[4096];
     DWORD bytesRead;
@@ -193,12 +193,12 @@ nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
     JSON_FILE_LOADED = true; // Could find file
 
     nlohmann::json jsonData;
-    file >> jsonData; 
+    file >> jsonData;
     file.close();
 
     std::string version = "";
     version = jsonData.value("version", "");
-    log_line("Loaded JSON file " + wstringToString(filename) + " (version: " + version + ")");
+    log_line("Loaded local JSON file " + wstringToString(filename) + " (version: " + version + ")");
 
     return jsonData;
 }
@@ -225,8 +225,8 @@ nlohmann::json LoadJsonFromUrl(const std::string& url) {
 
     std::string version = "";
     version = jsonData.value("version", "");
-    log_line("Loaded JSON file from URL " + url + " (version: " + version + ")");
-	
+    log_line("Loaded URL JSON file " + url + " (version: " + version + ")");
+
     return jsonData;
 }
 void LoadDataFromJson(nlohmann::json jsonData) {
@@ -319,7 +319,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
 
 
                 // If we're larger than 20 characters we erase the first char to keep the buffer manageable
-                if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);                 
+                if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);
 
                 // Loop through each known shortcut and see if we match
                 for (const auto& pair : shortcuts) {
@@ -338,7 +338,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
 
                         if (enableLogging) {
                             char buffer[100];
-                            snprintf(buffer, sizeof(buffer), "Heard '%ls'", pair.first.c_str());
+                            snprintf(buffer, sizeof(buffer), "Shortcut '%ls' triggered", pair.first.c_str());
                             log_line(buffer);
                         }
 
@@ -401,7 +401,7 @@ void CloseWindowAndExit() {
 void AddToStartup() {
     std::wstring progPath = GetExecutableDirectory() + L"\\OpenKeys.exe";
     HKEY hkey = NULL;
-    LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hkey); //Creates a key       
+    LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hkey); //Creates a key
     LONG status = RegSetValueEx(hkey, L"MyApp", 0, REG_SZ, (BYTE*)progPath.c_str(), static_cast<DWORD>((progPath.size() + 1) * sizeof(wchar_t)));
 }
 
@@ -467,6 +467,9 @@ void LoadShortcuts() {
 				log_line("Did not overwrite local JSON, using local data");
 			}
         }
+        else if (jsonURL["version"] == jsonFILE["version"]) {
+            log_line("Local and remote versions are the same");
+        }
 
 	}
     LoadDataFromJson(jsonFILE);
@@ -509,7 +512,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                 log_line("Appdata directory created");
             }
         }
-        
+
         if (!f.good()) {
             log_line("Logfile created (You can disable logging by setting enable_logging to false in your json)");
         }
