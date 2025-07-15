@@ -793,9 +793,41 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     switch (message) {
-    case WM_INITDIALOG:
+    case WM_INITDIALOG: {
         SetDlgItemText(hDlg, IDC_VERSION, (L"Version " + VERSION_STRING).c_str());
+
+        // Load and display the bitmap image
+        HBITMAP hBitmap = (HBITMAP)LoadImage(hInst, MAKEINTRESOURCE(IDB_BITMAP1),
+            IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR);
+        if (hBitmap) {
+            SendDlgItemMessage(hDlg, IDC_STATIC, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBitmap);
+        }
+
         return (INT_PTR)TRUE;
+    }
+
+    case WM_CTLCOLORDLG: {
+        HDC hdcStatic = (HDC)wParam;
+        SetBkColor(hdcStatic, RGB(255, 255, 255)); // White background
+        return (INT_PTR)GetStockObject(WHITE_BRUSH);
+    }
+
+    case WM_CTLCOLORSTATIC: {
+        HDC hdcStatic = (HDC)wParam;
+        HWND hwndStatic = (HWND)lParam;
+
+        // Get the control ID to identify which static control this is
+        int ctrlId = GetDlgCtrlID(hwndStatic);
+
+        // Make copyright and version labels transparent
+        if (ctrlId == IDC_STATIC || ctrlId == IDC_VERSION) {
+            SetBkMode(hdcStatic, TRANSPARENT);
+            SetTextColor(hdcStatic, RGB(0, 0, 0)); // Black text for visibility
+            return (INT_PTR)GetStockObject(NULL_BRUSH); // Transparent background
+        }
+
+        return (INT_PTR)DefWindowProc(hDlg, WM_CTLCOLORSTATIC, wParam, lParam);
+    }
 
     case WM_COMMAND:
         if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
