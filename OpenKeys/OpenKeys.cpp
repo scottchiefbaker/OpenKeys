@@ -111,6 +111,15 @@ std::string wstringToString(const std::wstring& wstr) {
     return str;
 }
 
+void InfoMessage(LPCWSTR title, LPCWSTR contents) {
+    MessageBox(NULL, contents, title, MB_OK | MB_ICONINFORMATION);
+}
+void InfoMessage(LPCWSTR contents) {
+    InfoMessage(L"Info", contents);
+}
+void ErrorMessage(LPCWSTR title, LPCWSTR contents) {
+    MessageBox(NULL, contents, title, MB_OK | MB_ICONERROR);
+}
 void UpdateDisplayedTextFromShortcuts() {
     displayedText = L"";
     if (easterEgg) {
@@ -479,6 +488,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LPCWSTR szUniqueNamedMutex = L"screw_shortkeys_I_aint_paying_40_bucks";
     hHandle = CreateMutex(NULL, TRUE, szUniqueNamedMutex);
     if (ERROR_ALREADY_EXISTS == GetLastError()) {
+        InfoMessage(L"Instance already running", L"Openkeys is already running. Check your system tray.");
         return(1);
     }
 
@@ -488,12 +498,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         std::wstring log_path = GetAppDataDir() + L"\\OpenKeys\\openkeys.log";
         std::ifstream f(wstringToString(log_path.c_str()));
         LOG.open(log_path, std::ios::app); // Open the log file for APPENDING
-
-        if (!LOG) {
-            std::cerr << "Failed to open the log file for appending.\n";
-            exit(9);
+        if (!LOG) { // If doesn't exist, create and try again
+            if (!std::filesystem::create_directory(GetAppDataDir() + L"\\OpenKeys")) {
+                ErrorMessage(L"Fatal Error", L"Error 10: Could not create OpenKeys directory in Appdata");
+                std::cerr << "Failed to create Appdata directory";
+                exit(10);
+            }
+            else {
+                log_line("Appdata directory created");
+            }
         }
-
+        
         if (!f.good()) {
             log_line("Logfile created (You can disable logging by setting enable_logging to false in your json)");
         }
@@ -754,7 +769,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             }
 
             if (inputIndex > MAX_CHAR_LENGTH) {
-                log_line(std::to_string(inputIndex) + " err #26694");
+                ErrorMessage(L"Fatal Error", L"Error 26: Maximum Key Buffer exceeded");
+                log_line(std::to_string(inputIndex) + " err #26");
                 exit(26);
             }
         }
