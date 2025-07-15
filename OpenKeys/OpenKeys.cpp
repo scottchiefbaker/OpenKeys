@@ -127,9 +127,7 @@ void UpdateDisplayedTextFromShortcuts() {
     }
     else {
         if (JSON_FILE_LOADED) {
-            displayedText += L"Shortcuts Version: " + version + L"\n";
-            displayedText += L"JSON File: " + json_path + L"\n";
-            displayedText += L"Prefix Key: " + prefix + L"\n";
+            displayedText += L"Usage: " + prefix + L" + [Shortcut]\n";
 
             if (gotochar.length() > 0) {
                 displayedText += L"Goto Char: " + gotochar + L"\n";
@@ -140,6 +138,9 @@ void UpdateDisplayedTextFromShortcuts() {
             for (const auto& pair : shortcuts) {
                 displayedText += pair.first + L"\n";
             }
+
+            displayedText += L"\n";
+            displayedText += L"Shortcuts Version: " + version;
         }
         else {
             displayedText += L"No JSON file was loaded";
