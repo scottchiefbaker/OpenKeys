@@ -46,6 +46,10 @@ std::map<std::wstring, std::wstring> shortcuts;
 HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
 
+// Scroll bar variables
+int scrollY = 0;
+int maxScrollY = 0;
+
 // Global variable for path to JSON file
 std::wstring json_path;
 
@@ -625,25 +629,25 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
     case WM_COMMAND: {
-            int wmId = LOWORD(wParam);
-            // Parse the menu selections:
-            switch (wmId) {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_REFRESH_BUTTON:
-                log_line("Reloaded JSON file");
-                LoadShortcuts();
-                UpdateDisplayedTextFromShortcuts();
-                break;
-            case IDM_EXIT:
-                CloseWindowAndExit();
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
+        int wmId = LOWORD(wParam);
+        // Parse the menu selections:
+        switch (wmId) {
+        case IDM_ABOUT:
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+            break;
+        case IDM_REFRESH_BUTTON:
+            log_line("Reloaded JSON file");
+            LoadShortcuts();
+            UpdateDisplayedTextFromShortcuts();
+            break;
+        case IDM_EXIT:
+            CloseWindowAndExit();
+            break;
+        default:
+            return DefWindowProc(hWnd, message, wParam, lParam);
         }
-        break;
+    }
+                   break;
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hWnd, &ps);
@@ -668,23 +672,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         // Set the background mode to transparent (so background won't overwrite the text)
         SetBkMode(hdc, TRANSPARENT);
 
-        // Draw the text
-        DrawTextW(hdc, displayedText.c_str(), -1, &rect, DT_LEFT | DT_TOP | DT_WORDBREAK);
+        // Calculate the full text height to determine drawing area
+        RECT textRect = { 0, 0, rect.right - rect.left, 0 };
+        DrawTextW(hdc, displayedText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_CALCRECT);
+
+        // Set the viewport origin to handle scrolling
+        SetViewportOrgEx(hdc, 0, -scrollY, NULL);
+
+        // Draw the text in the full content area (use calculated height)
+        RECT drawRect = { 0, 0, rect.right - rect.left, textRect.bottom };
+        DrawTextW(hdc, displayedText.c_str(), -1, &drawRect, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
         // Restore the graphics state to prevent affecting other parts of the window
         RestoreDC(hdc, savedDC);
-        
+
         // Restore the old font
         SelectObject(hdc, oldFont);
 
         EndPaint(hWnd, &ps);
 
-        }
-        break;
+    }
+                 break;
     case WM_DESTROY: {
         CloseWindowAndExit();
     }
-        break;
+                   break;
     case WM_SENDKEYS: {
         size_t triggerLen = (size_t)wParam;
 
@@ -736,7 +748,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                 exit(26);
             }
         }
-        
+
         // Step 3: if shortcut contains gotochar move text cursor to it
         if (gotochar.length() > 0) {
             if (pendingReplacement.find(gotochar) != std::wstring::npos) {
@@ -766,29 +778,100 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         }
         SendInput(inputIndex, inputs, sizeof(INPUT));
     }
-        break;
+                    break;
     case WM_SIZE: {
         if (wParam == SIZE_MINIMIZED) {
             MinimizeToTray(hWnd);
         }
+        else {
+            // Update scroll bar when window is resized
+            RECT rect;
+            GetClientRect(hWnd, &rect);
+
+            // Calculate text height with proper width constraint
+            HDC hdc = GetDC(hWnd);
+            HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
+            RECT textRect = { 0, 0, rect.right - rect.left, 0 };
+            DrawTextW(hdc, displayedText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_CALCRECT);
+            SelectObject(hdc, oldFont);
+            ReleaseDC(hWnd, hdc);
+
+            int textHeight = textRect.bottom - textRect.top;
+            int clientHeight = rect.bottom - rect.top;
+
+            // Show/hide scroll bar based on content size
+            if (textHeight > clientHeight) {
+                ShowScrollBar(hWnd, SB_VERT, TRUE);
+                maxScrollY = textHeight - clientHeight;
+                SetScrollRange(hWnd, SB_VERT, 0, maxScrollY, TRUE);
+                SetScrollPos(hWnd, SB_VERT, scrollY, TRUE);
+            }
+            else {
+                ShowScrollBar(hWnd, SB_VERT, FALSE);
+                scrollY = 0;
+                maxScrollY = 0;
+            }
+        }
     }
-        break;
+                break;
+    case WM_VSCROLL: {
+        int scrollCode = LOWORD(wParam);
+        int pos = HIWORD(wParam);
+
+        switch (scrollCode) {
+        case SB_LINEUP:
+            scrollY = max(0, scrollY - 20);
+            break;
+        case SB_LINEDOWN:
+            scrollY = min(maxScrollY, scrollY + 20);
+            break;
+        case SB_PAGEUP:
+            scrollY = max(0, scrollY - 100);
+            break;
+        case SB_PAGEDOWN:
+            scrollY = min(maxScrollY, scrollY + 100);
+            break;
+        case SB_THUMBTRACK:
+        case SB_THUMBPOSITION:
+            scrollY = pos;
+            break;
+        case SB_TOP:
+            scrollY = 0;
+            break;
+        case SB_BOTTOM:
+            scrollY = maxScrollY;
+            break;
+        }
+
+        SetScrollPos(hWnd, SB_VERT, scrollY, TRUE);
+        InvalidateRect(hWnd, NULL, TRUE);
+    }
+                   break;
+
+    case WM_MOUSEWHEEL: {
+        int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+        int scrollAmount = delta / WHEEL_DELTA * 30; // 30 pixels per wheel notch
+
+        scrollY = max(0, min(maxScrollY, scrollY - scrollAmount));
+        SetScrollPos(hWnd, SB_VERT, scrollY, TRUE);
+        InvalidateRect(hWnd, NULL, TRUE);
+    }
+                      break;
+
     case WM_TRAYICON: {
         if (lParam == WM_LBUTTONUP) {
             RestoreFromTray(hWnd);
         }
         else if (lParam == WM_RBUTTONUP) {
-            //CloseWindowAndExit();
-            RestoreFromTray(hWnd);
+            CloseWindowAndExit();
         }
     }
-        break;
-    default: 
+                    break;
+    default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
 }
-
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
