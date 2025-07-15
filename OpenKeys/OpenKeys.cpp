@@ -408,6 +408,8 @@ void AddToStartup() {
 void LoadShortcuts() {
     shortcuts.clear();
     nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
+
+	// If there is no local JSON file, we download the default one from github
     if (jsonFILE.empty()) {
         log_line("Downloading default JSON from github: " + json_default_url);
         std::string json_default_data = DownloadJsonFromURL(json_default_url);
@@ -431,17 +433,21 @@ void LoadShortcuts() {
 
         jsonFILE = LoadJsonFromFile(json_path);
     }
-    if (JsonHasKey(jsonFILE, "external_url")) { // If the JSON has an external URL, we check the versions and ask to overwrite if they don't match
-        log_line("User provided URL: " + jsonFILE["external_url"].get<std::string>());
+
+    // If the JSON has an external URL, we check the versions and ask to overwrite if they don't match
+    if (JsonHasKey(jsonFILE, "external_url")) {
+
         nlohmann::json jsonURL = LoadJsonFromUrl(jsonFILE["external_url"]);
         if (jsonURL.empty()) {
 			log_line("Failed to load JSON from URL: " + jsonFILE["external_url"].get<std::string>());
             MessageBox(NULL, L"The URL you provided does not contain valid JSON. Please verify URL.", L"Warning", MB_ICONWARNING);
 			return;
 		}
+
+        // The local version and remote versions are different
         if (jsonURL["version"] != jsonFILE["version"]) {
             int overwrite = MessageBox(NULL, L"New version of shortcuts found. Would you like to use the new version?", L"New shortcuts found", MB_ICONINFORMATION | MB_YESNO);
-            
+
             // If the user chooses to overwrite, we overwrite the local JSON with the one from the URL
             if (overwrite == IDYES) {
                 // If the remote JSON does not have an external URL, we preserve the local one
