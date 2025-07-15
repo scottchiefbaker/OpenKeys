@@ -152,6 +152,7 @@
     <Image Include="icon1.ico" />
     <Image Include="Image.jpg" />
     <Image Include="OpenKeys.ico" />
+    <Image Include="OpenKeys.bmp" />
     <Image Include="small.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

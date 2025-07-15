@@ -47,6 +47,10 @@ std::map<std::wstring, std::wstring> shortcuts;
 HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
 
+// Scroll bar variables
+int scrollY    = 0;
+int maxScrollY = 0;
+
 // Global variable for path to JSON file
 std::wstring json_path;
 
@@ -130,6 +134,35 @@ void UpdateDisplayedTextFromShortcuts() {
         }
         else {
             displayedText += L"No JSON file was loaded";
+        }
+    }
+
+    // Update scroll bar after text changes
+    if (g_hWnd) {
+        RECT rect;
+        GetClientRect(g_hWnd, &rect);
+
+        // Calculate text height with proper width constraint
+        HDC hdc = GetDC(g_hWnd);
+        HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
+        RECT textRect = {0, 0, rect.right - rect.left, 0};
+        DrawTextW(hdc, displayedText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_CALCRECT);
+        SelectObject(hdc, oldFont);
+        ReleaseDC(g_hWnd, hdc);
+
+        int textHeight = textRect.bottom - textRect.top;
+        int clientHeight = rect.bottom - rect.top;
+
+        // Show/hide scroll bar based on content size
+        if (textHeight > clientHeight) {
+            ShowScrollBar(g_hWnd, SB_VERT, TRUE);
+            maxScrollY = textHeight - clientHeight;
+            SetScrollRange(g_hWnd, SB_VERT, 0, maxScrollY, TRUE);
+            SetScrollPos(g_hWnd, SB_VERT, scrollY, TRUE);
+        } else {
+            ShowScrollBar(g_hWnd, SB_VERT, FALSE);
+            scrollY = 0;
+            maxScrollY = 0;
         }
     }
 }
@@ -572,7 +605,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    HWND hWnd = CreateWindowW(
        szWindowClass,
        szTitle,
-       WS_OVERLAPPEDWINDOW,
+       WS_OVERLAPPEDWINDOW | WS_VSCROLL,
        20,  // X start
        20,  // Y start
        800, // Window width
@@ -678,8 +711,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         // Set the background mode to transparent (so background won't overwrite the text)
         SetBkMode(hdc, TRANSPARENT);
 
-        // Draw the text
-        DrawTextW(hdc, displayedText.c_str(), -1, &rect, DT_LEFT | DT_TOP | DT_WORDBREAK);
+        // Calculate the full text height to determine drawing area
+        RECT textRect = {0, 0, rect.right - rect.left, 0};
+        DrawTextW(hdc, displayedText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_CALCRECT);
+
+        // Set the viewport origin to handle scrolling
+        SetViewportOrgEx(hdc, 0, -scrollY, NULL);
+
+        // Draw the text in the full content area (use calculated height)
+        RECT drawRect = {0, 0, rect.right - rect.left, textRect.bottom};
+        DrawTextW(hdc, displayedText.c_str(), -1, &drawRect, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
         // Restore the graphics state to prevent affecting other parts of the window
         RestoreDC(hdc, savedDC);
@@ -781,8 +822,80 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         if (wParam == SIZE_MINIMIZED) {
             MinimizeToTray(hWnd);
         }
+        else {
+            // Update scroll bar when window is resized
+            RECT rect;
+            GetClientRect(hWnd, &rect);
+
+            // Calculate text height with proper width constraint
+            HDC hdc = GetDC(hWnd);
+            HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
+            RECT textRect = {0, 0, rect.right - rect.left, 0};
+            DrawTextW(hdc, displayedText.c_str(), -1, &textRect, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_CALCRECT);
+            SelectObject(hdc, oldFont);
+            ReleaseDC(hWnd, hdc);
+
+            int textHeight = textRect.bottom - textRect.top;
+            int clientHeight = rect.bottom - rect.top;
+
+            // Show/hide scroll bar based on content size
+            if (textHeight > clientHeight) {
+                ShowScrollBar(hWnd, SB_VERT, TRUE);
+                maxScrollY = textHeight - clientHeight;
+                SetScrollRange(hWnd, SB_VERT, 0, maxScrollY, TRUE);
+                SetScrollPos(hWnd, SB_VERT, scrollY, TRUE);
+            } else {
+                ShowScrollBar(hWnd, SB_VERT, FALSE);
+                scrollY = 0;
+                maxScrollY = 0;
+            }
+        }
     }
         break;
+    case WM_VSCROLL: {
+        int scrollCode = LOWORD(wParam);
+        int pos = HIWORD(wParam);
+
+        switch (scrollCode) {
+        case SB_LINEUP:
+            scrollY = max(0, scrollY - 20);
+            break;
+        case SB_LINEDOWN:
+            scrollY = min(maxScrollY, scrollY + 20);
+            break;
+        case SB_PAGEUP:
+            scrollY = max(0, scrollY - 100);
+            break;
+        case SB_PAGEDOWN:
+            scrollY = min(maxScrollY, scrollY + 100);
+            break;
+        case SB_THUMBTRACK:
+        case SB_THUMBPOSITION:
+            scrollY = pos;
+            break;
+        case SB_TOP:
+            scrollY = 0;
+            break;
+        case SB_BOTTOM:
+            scrollY = maxScrollY;
+            break;
+        }
+
+        SetScrollPos(hWnd, SB_VERT, scrollY, TRUE);
+        InvalidateRect(hWnd, NULL, TRUE);
+    }
+        break;
+
+    case WM_MOUSEWHEEL: {
+        int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+        int scrollAmount = delta / WHEEL_DELTA * 30; // 30 pixels per wheel notch
+
+        scrollY = max(0, min(maxScrollY, scrollY - scrollAmount));
+        SetScrollPos(hWnd, SB_VERT, scrollY, TRUE);
+        InvalidateRect(hWnd, NULL, TRUE);
+    }
+        break;
+
     case WM_TRAYICON: {
         if (lParam == WM_LBUTTONUP) {
             RestoreFromTray(hWnd);
@@ -803,9 +916,41 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     UNREFERENCED_PARAMETER(lParam);
     switch (message) {
-    case WM_INITDIALOG:
+    case WM_INITDIALOG: {
         SetDlgItemText(hDlg, IDC_VERSION, (L"Version " + VERSION_STRING).c_str());
+
+        // Load and display the bitmap image
+        HBITMAP hBitmap = (HBITMAP)LoadImage(hInst, MAKEINTRESOURCE(IDB_OPENKEYS_JPG),
+                                           IMAGE_BITMAP, 0, 0, LR_DEFAULTCOLOR);
+        if (hBitmap) {
+            SendDlgItemMessage(hDlg, IDC_IMAGE, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBitmap);
+        }
+
         return (INT_PTR)TRUE;
+    }
+
+    case WM_CTLCOLORDLG: {
+        HDC hdcStatic = (HDC)wParam;
+        SetBkColor(hdcStatic, RGB(255, 255, 255)); // White background
+        return (INT_PTR)GetStockObject(WHITE_BRUSH);
+    }
+
+    case WM_CTLCOLORSTATIC: {
+        HDC hdcStatic = (HDC)wParam;
+        HWND hwndStatic = (HWND)lParam;
+
+        // Get the control ID to identify which static control this is
+        int ctrlId = GetDlgCtrlID(hwndStatic);
+
+        // Make copyright and version labels transparent
+        if (ctrlId == IDC_STATIC || ctrlId == IDC_VERSION) {
+            SetBkMode(hdcStatic, TRANSPARENT);
+            SetTextColor(hdcStatic, RGB(0, 0, 0)); // Black text for visibility
+            return (INT_PTR)GetStockObject(NULL_BRUSH); // Transparent background
+        }
+
+        return (INT_PTR)DefWindowProc(hDlg, WM_CTLCOLORSTATIC, wParam, lParam);
+    }
 
     case WM_COMMAND:
         if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {

@@ -13,6 +13,8 @@
 #define IDC_OPENKEYS                    109
 #define IDR_MAINFRAME                   128
 #define IDI_ICON1                       130
+#define IDB_OPENKEYS_JPG                131
+#define IDC_IMAGE                       1001
 #define IDC_VERSION                     1000
 #define ID_Menu                         32771
 #define IDM_REFRESH_BUTTON              32772
@@ -23,9 +25,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        131
+#define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32774
-#define _APS_NEXT_CONTROL_VALUE         1001
+#define _APS_NEXT_CONTROL_VALUE         1002
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
