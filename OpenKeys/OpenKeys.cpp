@@ -707,7 +707,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         SetViewportOrgEx(hdc, 0, -scrollY, NULL);
 
         // Draw the text in the full content area (use calculated height)
-        RECT drawRect = { 0, 0, rect.right - rect.left, textRect.bottom };
+        int padding   = 4;
+        RECT drawRect = { padding, padding, rect.right - rect.left, textRect.bottom + padding };
         DrawTextW(hdc, displayedText.c_str(), -1, &drawRect, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
         // Restore the graphics state to prevent affecting other parts of the window
