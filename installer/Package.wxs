@@ -1,38 +1,57 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-	<Package Id="OpenKeys.test" Name="OpenKeys" Manufacturer="RolandSoft" Version="0.2.6">
+	<Package
+		Id="OpenKeys.test"
+		Name="OpenKeys"
+		Manufacturer="RolandSoft"
+		Version="0.2.6"
+		UpgradeCode="ad55082a-c063-4295-8731-19791eab93dc">
+
 		<MediaTemplate EmbedCab="yes" />
 
-		<SetDirectory Id="INSTALLFOLDER" Value="[WindowsVolume]OpenKeys" />
+		<!-- Upgrade old versions if already installed -->
 
-		<Directory Id="TARGETROOT" Name="WindowsVolume">
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+		<!-- EXE file in ProgramFiles -->
+
+		<StandardDirectory Id="ProgramFilesFolder">
 			<Directory Id="INSTALLFOLDER" Name="OpenKeys">
-
 				<Component Id="OpenKeysExeComponent" Guid="*">
-					<File Source="OpenKeys.exe" />
-				</Component>
+					<File Id="OpenKeysExe" Source="OpenKeys.exe" />
 
-				<Component Id="ShortcutsJsonComponent" Guid="*">
-					<File Source="shortcuts.json" />
+					<RemoveFile Id="RemoveEXEFile" Name="OpenKeys.exe" On="uninstall" />
+					<RemoveFolder Id="RemoveEXEFolder" On="uninstall" />
 				</Component>
-
-				<Component Id="StartupRegistryComponent" Guid="*">
-					<RegistryValue
-						Root="HKLM"
-						Key="Software\Microsoft\Windows\CurrentVersion\Run"
-						Name="OpenKeys"
-						Value="&quot;[INSTALLFOLDER]OpenKeys.exe&quot;"
-						Type="string"
-						Action="write"
-					/>
-				</Component>
-
 			</Directory>
-		</Directory>
+		</StandardDirectory>
+
+		<!-- JSON in %APPDATA% -->
+
+		<StandardDirectory Id="AppDataFolder">
+			<Directory Id="JSONFOLDER" Name="OpenKeys">
+				<Component Id="JSONComponent" Guid="48974f31-bcb2-4309-bc43-0bc1f268fef3">
+					<File Id="ShortcutJSON" Source="shortcuts.json" />
+
+					<RemoveFile Id="RemoveJSONFile" Name="shortcuts.json" On="uninstall" />
+					<RemoveFolder Id="RemoveJSONFolder" On="uninstall" />
+
+					<RegistryKey Id="AutoStartRegistryKey"
+						ForceCreateOnInstall="yes"
+						Root="HKCU"
+						Key="Software\Microsoft\Windows\CurrentVersion\Run">
+						<RegistryValue Name="OpenKeys" KeyPath="yes" Type="string" Value="&quot;[INSTALLFOLDER]OpenKeys.exe&quot;" />
+					</RegistryKey>
+				</Component>
+			</Directory>
+		</StandardDirectory>
+
+		<!-- Feature Information -->
 
 		<Feature Id="ProductFeature" Title="OpenKeys" Level="1">
 			<ComponentRef Id="OpenKeysExeComponent" />
-			<ComponentRef Id="ShortcutsJsonComponent" />
-			<ComponentRef Id="StartupRegistryComponent" />
+			<ComponentRef Id="JSONComponent" />
 		</Feature>
+
 	</Package>
 </Wix>
+
