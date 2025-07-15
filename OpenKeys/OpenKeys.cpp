@@ -436,7 +436,7 @@ void LoadShortcuts() {
                 }
 
                 // Write the new JSON to the local file
-                std::ofstream file("shortcuts.json");
+                std::ofstream file(json_path);
                 if (file.is_open()) {
                     file << jsonURL.dump(4); // Pretty print with 4 spaces
                 } else {
