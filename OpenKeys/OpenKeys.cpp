@@ -157,7 +157,7 @@ std::string DownloadJsonFromURL(const std::string& url) {
         InternetCloseHandle(hInternet);
         return "";
     }
-    
+
     std::string data;
     char buffer[4096];
     DWORD bytesRead;
@@ -193,12 +193,12 @@ nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
     JSON_FILE_LOADED = true; // Could find file
 
     nlohmann::json jsonData;
-    file >> jsonData; 
+    file >> jsonData;
     file.close();
 
     std::string version = "";
     version = jsonData.value("version", "");
-    log_line("Loaded JSON file " + wstringToString(filename) + " (version: " + version + ")");
+    log_line("Loaded local JSON file " + wstringToString(filename) + " (version: " + version + ")");
 
     return jsonData;
 }
@@ -225,8 +225,8 @@ nlohmann::json LoadJsonFromUrl(const std::string& url) {
 
     std::string version = "";
     version = jsonData.value("version", "");
-    log_line("Loaded JSON file from URL " + url + " (version: " + version + ")");
-	
+    log_line("Loaded URL JSON file " + url + " (version: " + version + ")");
+
     return jsonData;
 }
 void LoadDataFromJson(nlohmann::json jsonData) {
@@ -319,7 +319,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
 
 
                 // If we're larger than 20 characters we erase the first char to keep the buffer manageable
-                if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);                 
+                if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);
 
                 // Loop through each known shortcut and see if we match
                 for (const auto& pair : shortcuts) {
@@ -338,7 +338,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
 
                         if (enableLogging) {
                             char buffer[100];
-                            snprintf(buffer, sizeof(buffer), "Heard '%ls'", pair.first.c_str());
+                            snprintf(buffer, sizeof(buffer), "Shortcut '%ls' triggered", pair.first.c_str());
                             log_line(buffer);
                         }
 
@@ -401,13 +401,15 @@ void CloseWindowAndExit() {
 void AddToStartup() {
     std::wstring progPath = GetExecutableDirectory() + L"\\OpenKeys.exe";
     HKEY hkey = NULL;
-    LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hkey); //Creates a key       
+    LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hkey); //Creates a key
     LONG status = RegSetValueEx(hkey, L"MyApp", 0, REG_SZ, (BYTE*)progPath.c_str(), static_cast<DWORD>((progPath.size() + 1) * sizeof(wchar_t)));
 }
 
 void LoadShortcuts() {
     shortcuts.clear();
     nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
+
+	// If there is no local JSON file, we download the default one from github
     if (jsonFILE.empty()) {
         log_line("Downloading default JSON from github: " + json_default_url);
         std::string json_default_data = DownloadJsonFromURL(json_default_url);
@@ -431,17 +433,21 @@ void LoadShortcuts() {
 
         jsonFILE = LoadJsonFromFile(json_path);
     }
-    if (JsonHasKey(jsonFILE, "external_url")) { // If the JSON has an external URL, we check the versions and ask to overwrite if they don't match
-        log_line("User provided URL: " + jsonFILE["external_url"].get<std::string>());
+
+    // If the JSON has an external URL, we check the versions and ask to overwrite if they don't match
+    if (JsonHasKey(jsonFILE, "external_url")) {
+
         nlohmann::json jsonURL = LoadJsonFromUrl(jsonFILE["external_url"]);
         if (jsonURL.empty()) {
 			log_line("Failed to load JSON from URL: " + jsonFILE["external_url"].get<std::string>());
             MessageBox(NULL, L"The URL you provided does not contain valid JSON. Please verify URL.", L"Warning", MB_ICONWARNING);
 			return;
 		}
+
+        // The local version and remote versions are different
         if (jsonURL["version"] != jsonFILE["version"]) {
             int overwrite = MessageBox(NULL, L"New version of shortcuts found. Would you like to use the new version?", L"New shortcuts found", MB_ICONINFORMATION | MB_YESNO);
-            
+
             // If the user chooses to overwrite, we overwrite the local JSON with the one from the URL
             if (overwrite == IDYES) {
                 // If the remote JSON does not have an external URL, we preserve the local one
@@ -466,6 +472,9 @@ void LoadShortcuts() {
 			else {
 				log_line("Did not overwrite local JSON, using local data");
 			}
+        }
+        else if (jsonURL["version"] == jsonFILE["version"]) {
+            log_line("Local and remote versions are the same");
         }
 
 	}
@@ -509,11 +518,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                 log_line("Appdata directory created");
             }
         }
-        
+
         if (!f.good()) {
             log_line("Logfile created (You can disable logging by setting enable_logging to false in your json)");
         }
-        log_line("OpenKeys started");
+
+        char buffer[100];
+        snprintf(buffer, sizeof(buffer), "OpenKeys v%ls started", VERSION_STRING.c_str());
+        log_line(buffer);
 
     }
 
@@ -707,7 +719,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         SetViewportOrgEx(hdc, 0, -scrollY, NULL);
 
         // Draw the text in the full content area (use calculated height)
-        RECT drawRect = { 0, 0, rect.right - rect.left, textRect.bottom };
+        int padding   = 4;
+        RECT drawRect = { padding, padding, rect.right - rect.left, textRect.bottom + padding };
         DrawTextW(hdc, displayedText.c_str(), -1, &drawRect, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
         // Restore the graphics state to prevent affecting other parts of the window
