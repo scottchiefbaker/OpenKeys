@@ -513,7 +513,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         if (!f.good()) {
             log_line("Logfile created (You can disable logging by setting enable_logging to false in your json)");
         }
-        log_line("OpenKeys started");
+
+        char buffer[100];
+        snprintf(buffer, sizeof(buffer), "OpenKeys v%ls started", VERSION_STRING.c_str());
+        log_line(buffer);
 
     }
 
