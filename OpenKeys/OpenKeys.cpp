@@ -16,6 +16,8 @@
 #define WM_SENDKEYS (WM_USER + 1)
 #define WM_TRAYICON (WM_USER + 2)
 #define MAX_CHAR_LENGTH 10240
+#define METHOD_SENDKEYS 0
+#define METHOD_COPYPASTE 1
 
 std::wstring VERSION_STRING = L"0.3.0";
 
@@ -38,6 +40,7 @@ std::string json_default_url = "https://raw.githubusercontent.com/feive7/OpenKey
 // Configurable stuff
 bool START_MINIMIZED = false;
 bool enableLogging = true;
+int inputMethod = METHOD_SENDKEYS;
 bool easterEgg = false;
 std::wstring prefix;
 std::wstring gotochar;
@@ -243,6 +246,15 @@ void LoadDataFromJson(nlohmann::json jsonData) {
     }
     if (JsonHasKey(jsonData, "ternary")) {
         easterEgg = true;
+    }
+    if (JsonHasKey(jsonData, "input_method")) {
+        std::wstring inputMethodWish = Utf8ToWstring(jsonData["input_method"]);
+        if (inputMethodWish == L"sendkeys") {
+            inputMethod = METHOD_SENDKEYS;
+        }
+        else if (inputMethodWish == L"copypaste") {
+            inputMethod = METHOD_COPYPASTE;
+        }
     }
     for (auto& el : jsonData["shortcuts"].items()) {
         std::wstring key = Utf8ToWstring(el.key());
@@ -654,7 +666,132 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    return TRUE;
 }
 
-//
+void SendKeys(WPARAM wParam) {
+    size_t triggerLen = (size_t)wParam;
+
+    int inputIndex = 0;
+
+    // Step 1: Erase the trigger text
+    for (size_t i = 0; i < triggerLen; ++i) {
+        inputs[inputIndex].type = INPUT_KEYBOARD;
+        inputs[inputIndex].ki.wVk = VK_BACK;
+        inputIndex++;
+
+        inputs[inputIndex].type = INPUT_KEYBOARD;
+        inputs[inputIndex].ki.wVk = VK_BACK;
+        inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
+        inputIndex++;
+    }
+
+    // Step 2: Type the replacement one character at a time
+    for (wchar_t ch : pendingReplacement) {
+        if (ch == L'\n') {
+            // Press Enter key
+            inputs[inputIndex].type = INPUT_KEYBOARD;
+            inputs[inputIndex].ki.wVk = VK_RETURN;
+            inputs[inputIndex].ki.dwFlags = 0;
+            inputIndex++;
+
+            inputs[inputIndex].type = INPUT_KEYBOARD;
+            inputs[inputIndex].ki.wVk = VK_RETURN;
+            inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
+            inputIndex++;
+        }
+        else {
+            // Unicode input
+            inputs[inputIndex].type = INPUT_KEYBOARD;
+            inputs[inputIndex].ki.wVk = 0;
+            inputs[inputIndex].ki.wScan = ch;
+            inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE;
+            inputIndex++;
+
+            inputs[inputIndex].type = INPUT_KEYBOARD;
+            inputs[inputIndex].ki.wVk = 0;
+            inputs[inputIndex].ki.wScan = ch;
+            inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+            inputIndex++;
+        }
+
+        if (inputIndex > MAX_CHAR_LENGTH) {
+            ErrorMessage(L"Fatal Error", L"Error 26: Maximum Key Buffer exceeded");
+            log_line(std::to_string(inputIndex) + " err #26");
+            exit(26);
+        }
+    }
+
+    // Step 3: if shortcut contains gotochar move text cursor to it
+    if (gotochar.length() > 0) {
+        if (pendingReplacement.find(gotochar) != std::wstring::npos) {
+
+            size_t pos = pendingReplacement.length() - pendingReplacement.find(gotochar) - 1;
+
+            for (int i = 0; i < pos; i++) {
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = VK_LEFT;
+                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE;
+                inputIndex++;
+                inputs[inputIndex].type = INPUT_KEYBOARD;
+                inputs[inputIndex].ki.wVk = VK_LEFT;
+                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+                inputIndex++;
+            }
+            // Remove the goto character
+            inputs[inputIndex].type = INPUT_KEYBOARD;
+            inputs[inputIndex].ki.wVk = VK_BACK;
+            inputIndex++;
+
+            inputs[inputIndex].type = INPUT_KEYBOARD;
+            inputs[inputIndex].ki.wVk = VK_BACK;
+            inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
+            inputIndex++;
+        }
+    }
+    SendInput(inputIndex, inputs, sizeof(INPUT));
+}
+std::string getClipboardContents() {
+    OpenClipboard(NULL);
+    HANDLE hData = GetClipboardData(CF_TEXT);
+    char* pszText = static_cast<char*>(GlobalLock(hData));
+    std::string text(pszText);
+    GlobalUnlock(hData);
+    CloseClipboard();
+    return text;
+}
+void copyToClipboard(const std::string& text) {
+    if (OpenClipboard(NULL)) {
+        EmptyClipboard();
+        HGLOBAL hg = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, text.size() + 1);
+        if (hg) {
+            char* data = static_cast<char*>(GlobalLock(hg));
+            if (data) {
+                strcpy_s(data, text.size() + 1, text.c_str());
+                GlobalUnlock(hg);
+                SetClipboardData(CF_TEXT, hg);
+            }
+        }
+        CloseClipboard();
+    }
+}
+void PasteKeys() {
+    std::string clipboardBuffer = getClipboardContents(); // Preserve original clipboard contents
+    copyToClipboard(wstringToString(pendingReplacement)); // Copy the pending replacement
+
+    keybd_event(VK_CONTROL, 0x1D, KEYEVENTF_EXTENDEDKEY | 0, 0); // Select the trigger word (Ctrl+Shift+Left)
+    keybd_event(VK_SHIFT, 0x1D, KEYEVENTF_EXTENDEDKEY | 0, 0);
+    keybd_event(VK_LEFT, 0x2F, KEYEVENTF_EXTENDEDKEY | 0, 0);
+    keybd_event(VK_LEFT, 0x2F, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+    keybd_event(VK_SHIFT, 0x1D, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+    keybd_event(VK_CONTROL, 0x1D, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+
+    keybd_event(VK_CONTROL, 0x1D, KEYEVENTF_EXTENDEDKEY | 0, 0); // Paste replacement over the trigger
+    keybd_event('V', 0x2F, KEYEVENTF_EXTENDEDKEY | 0, 0);
+    keybd_event('V', 0x2F, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+    keybd_event(VK_CONTROL, 0x1D, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+
+    Sleep(100);
+    copyToClipboard(clipboardBuffer); // Copy original clipboard contents
+}
+ //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
 //  PURPOSE: Processes messages for the main window.
@@ -738,86 +875,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     }
                    break;
     case WM_SENDKEYS: {
-        size_t triggerLen = (size_t)wParam;
-
-        int inputIndex = 0;
-
-        // Step 1: Erase the trigger text
-        for (size_t i = 0; i < triggerLen; ++i) {
-            inputs[inputIndex].type = INPUT_KEYBOARD;
-            inputs[inputIndex].ki.wVk = VK_BACK;
-            inputIndex++;
-
-            inputs[inputIndex].type = INPUT_KEYBOARD;
-            inputs[inputIndex].ki.wVk = VK_BACK;
-            inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
-            inputIndex++;
+        if (inputMethod == METHOD_SENDKEYS) {
+            SendKeys(wParam);
         }
-
-        // Step 2: Type the replacement one character at a time
-        for (wchar_t ch : pendingReplacement) {
-            if (ch == L'\n') {
-                // Press Enter key
-                inputs[inputIndex].type = INPUT_KEYBOARD;
-                inputs[inputIndex].ki.wVk = VK_RETURN;
-                inputs[inputIndex].ki.dwFlags = 0;
-                inputIndex++;
-
-                inputs[inputIndex].type = INPUT_KEYBOARD;
-                inputs[inputIndex].ki.wVk = VK_RETURN;
-                inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
-                inputIndex++;
-            }
-            else {
-                // Unicode input
-                inputs[inputIndex].type = INPUT_KEYBOARD;
-                inputs[inputIndex].ki.wVk = 0;
-                inputs[inputIndex].ki.wScan = ch;
-                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE;
-                inputIndex++;
-
-                inputs[inputIndex].type = INPUT_KEYBOARD;
-                inputs[inputIndex].ki.wVk = 0;
-                inputs[inputIndex].ki.wScan = ch;
-                inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
-                inputIndex++;
-            }
-
-            if (inputIndex > MAX_CHAR_LENGTH) {
-                ErrorMessage(L"Fatal Error", L"Error 26: Maximum Key Buffer exceeded");
-                log_line(std::to_string(inputIndex) + " err #26");
-                exit(26);
-            }
+        else if (inputMethod == METHOD_COPYPASTE) {
+            PasteKeys();
         }
-
-        // Step 3: if shortcut contains gotochar move text cursor to it
-        if (gotochar.length() > 0) {
-            if (pendingReplacement.find(gotochar) != std::wstring::npos) {
-
-                size_t pos = pendingReplacement.length() - pendingReplacement.find(gotochar) - 1;
-
-                for (int i = 0; i < pos; i++) {
-                    inputs[inputIndex].type = INPUT_KEYBOARD;
-                    inputs[inputIndex].ki.wVk = VK_LEFT;
-                    inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE;
-                    inputIndex++;
-                    inputs[inputIndex].type = INPUT_KEYBOARD;
-                    inputs[inputIndex].ki.wVk = VK_LEFT;
-                    inputs[inputIndex].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
-                    inputIndex++;
-                }
-                // Remove the goto character
-                inputs[inputIndex].type = INPUT_KEYBOARD;
-                inputs[inputIndex].ki.wVk = VK_BACK;
-                inputIndex++;
-
-                inputs[inputIndex].type = INPUT_KEYBOARD;
-                inputs[inputIndex].ki.wVk = VK_BACK;
-                inputs[inputIndex].ki.dwFlags = KEYEVENTF_KEYUP;
-                inputIndex++;
-            }
-        }
-        SendInput(inputIndex, inputs, sizeof(INPUT));
     }
                     break;
     case WM_SIZE: {
