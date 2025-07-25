@@ -8,6 +8,10 @@
 #include <iomanip>
 #include <iostream>
 
+// Prototypes for helper functions
+std::string wstringToString(const std::wstring& wstr);
+size_t log_line(std::string line);
+
 ///////////////////////////////////////////////////////////////////////////
 // Helper functions
 ///////////////////////////////////////////////////////////////////////////
@@ -16,6 +20,34 @@
 void OpenFolderInExplorer(const wchar_t* folderPath)
 {
     ShellExecuteW(NULL, L"open", folderPath, NULL, NULL, SW_SHOWNORMAL);
+}
+
+// Informational message box
+void InfoMessage(LPCWSTR title, LPCWSTR contents) {
+    MessageBox(NULL, contents, title, MB_OK | MB_ICONINFORMATION);
+}
+
+// Informational message box with default title
+void InfoMessage(LPCWSTR contents) {
+    InfoMessage(L"Info", contents);
+}
+
+// Warning message box
+void WarningMessage(LPCWSTR title, LPCWSTR contents) {
+    MessageBox(NULL, contents, title, MB_OK | MB_ICONWARNING);
+}
+
+// Error message popup message
+void ErrorMessage(LPCWSTR title, LPCWSTR contents) {
+    MessageBox(NULL, contents, title, MB_OK | MB_ICONERROR);
+}
+
+// Error message popup message
+void ErrorMessage(int error_id, LPCWSTR contents) {
+    std::wstring title = L"Error #" + std::to_wstring(error_id);
+    ErrorMessage(title.c_str(), contents);
+
+    log_line("Error #" + std::to_string(error_id) + ": " + wstringToString(contents));
 }
 
 // Get a simple datestring suitable for putting in a log file
@@ -40,6 +72,22 @@ size_t log_line(std::string line) {
     std::string date_str = get_datetime_string() + ": ";
 
     LOG << date_str << line << '\n';
+
+    LOG.flush();
+
+    return 1;
+}
+
+// Add a wstr line to the open log file
+size_t log_line(std::wstring line) {
+    if (!LOG) {
+        ErrorMessage(65473, L"Log file not ready #95874.");
+        return 0;
+    }
+
+    std::string tmp_str = get_datetime_string() + ": " + wstringToString(line);
+
+    LOG << tmp_str << '\n';
 
     LOG.flush();
 

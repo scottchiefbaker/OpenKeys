@@ -67,22 +67,6 @@ HANDLE hHandle;
 bool JSON_FILE_LOADED = false;
 bool JSON_URL_LOADED = false;
 
-void InfoMessage(LPCWSTR title, LPCWSTR contents) {
-    MessageBox(NULL, contents, title, MB_OK | MB_ICONINFORMATION);
-}
-void InfoMessage(LPCWSTR contents) {
-    InfoMessage(L"Info", contents);
-}
-void WarningMessage(LPCWSTR title, LPCWSTR contents) {
-    MessageBox(NULL, contents, title, MB_OK | MB_ICONWARNING);
-}
-void ErrorMessage(LPCWSTR title, LPCWSTR contents) {
-    MessageBox(NULL, contents, title, MB_OK | MB_ICONERROR);
-}
-void ErrorMessage(int error_id, LPCWSTR contents) {
-    std::wstring title = L"Error " + std::to_wstring(error_id);
-    ErrorMessage(title.c_str(), contents);
-}
 void UpdateDisplayedTextFromShortcuts() {
     displayedText = L"";
     if (easterEgg) {
