@@ -1,5 +1,4 @@
 #include "framework.h"
-#include "OpenKeys.h"
 #include <windows.h>
 #include <string>
 #include <random>
@@ -11,6 +10,9 @@
 #include <shellapi.h>
 #include <wininet.h>
 #pragma comment(lib, "wininet.lib")
+
+std::ofstream LOG; // Global log file stream
+#include "OpenKeys.h"
 
 #define MAX_LOADSTRING 100
 #define WM_SENDKEYS (WM_USER + 1)
@@ -26,8 +28,6 @@ uint8_t DEBUG_LEVEL = 0;
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
-
-std::ofstream LOG; // Global log file stream
 
 // Keyboard stuff
 HHOOK hKeyboardHook;
@@ -66,78 +66,6 @@ HANDLE hHandle;
 // Flags
 bool JSON_FILE_LOADED = false;
 bool JSON_URL_LOADED = false;
-
-// Get a simple datestring suitable for putting in a log file
-std::string get_datetime_string() {
-    std::time_t now = std::time(nullptr);
-    std::tm localTime{};
-    localtime_s(&localTime, &now); // Windows
-
-    std::ostringstream oss;
-    oss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
-
-    return oss.str();
-}
-
-// Add a line to the open log file
-size_t log_line(std::string line) {
-    if (!LOG) {
-        std::cerr << "Log file not ready #52195.\n";
-        return 0;
-    }
-
-    std::string date_str = get_datetime_string() + ": ";
-
-    LOG << date_str << line << '\n';
-
-    LOG.flush();
-
-    return 1;
-}
-LPCSTR WcharToLpcstr(const WCHAR* wideString) {
-    if (!wideString) {
-        return nullptr;
-    }
-
-    // Determine the required buffer size for the multibyte string
-    int bufferSize = WideCharToMultiByte(CP_ACP, 0, wideString, -1, NULL, 0, NULL, NULL);
-    if (bufferSize == 0) {
-        // Handle error
-        return nullptr;
-    }
-
-    // Allocate buffer for the multibyte string
-    std::vector<char> buffer(bufferSize);
-
-    // Perform the conversion
-    WideCharToMultiByte(CP_ACP, 0, wideString, -1, buffer.data(), bufferSize, NULL, NULL);
-
-    // Return a pointer to the converted string (ensure its lifetime is managed)
-    // Note: Returning a raw pointer to a local vector's data is unsafe if the vector goes out of scope.
-    // For practical use, consider returning std::string or dynamically allocating and managing memory.
-    return buffer.data(); // This is for demonstration; use with caution.
-}
-// Convert a UTF-8 string to a wide string
-std::wstring Utf8ToWstring(const std::string& str) {
-    if (str.empty()) return L"";
-
-    int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), NULL, 0);
-    std::wstring result(size_needed, 0);
-    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &result[0], size_needed);
-
-    return result;
-}
-
-// Convert a wide string to a UTF-8 string
-std::string wstringToString(const std::wstring& wstr) {
-    if (wstr.empty()) return std::string();
-
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
-    std::string str(size_needed, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), &str[0], size_needed, nullptr, nullptr);
-
-    return str;
-}
 
 void InfoMessage(LPCWSTR title, LPCWSTR contents) {
     MessageBox(NULL, contents, title, MB_OK | MB_ICONINFORMATION);
@@ -310,31 +238,6 @@ void LoadDataFromJson(nlohmann::json jsonData) {
     }
 }
 
-std::wstring GetAppDataDir() {
-    // Read the %APPDATA% environment variable
-    wchar_t buffer[MAX_PATH];
-    GetEnvironmentVariableW(L"APPDATA", buffer, MAX_PATH);  // Note the 'W' suffix
-
-    return buffer;
-}
-
-std::wstring GetExecutableDirectory() {
-    wchar_t path[MAX_PATH];
-    DWORD length = GetModuleFileNameW(NULL, path, MAX_PATH);
-    if (length == 0 || length == MAX_PATH) {
-        // Handle error
-        return L"";
-    }
-
-    std::wstring fullPath(path);
-    size_t lastSlash = fullPath.find_last_of(L"\\/");
-    if (lastSlash != std::wstring::npos) {
-        return fullPath.substr(0, lastSlash);
-    }
-
-    return fullPath; // fallback to full path if no slash found
-}
-
 // This is where the keypress is captured and compared against the list of shortcuts
 static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HC_ACTION) {
@@ -460,12 +363,6 @@ void CloseWindowAndExit() {
     // Free the memory from the inputs
     delete[] inputs;
     PostQuitMessage(0);
-}
-void AddToStartup() {
-    std::wstring progPath = GetExecutableDirectory() + L"\\OpenKeys.exe";
-    HKEY hkey = NULL;
-    LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hkey); //Creates a key
-    LONG status = RegSetValueEx(hkey, L"MyApp", 0, REG_SZ, (BYTE*)progPath.c_str(), static_cast<DWORD>((progPath.size() + 1) * sizeof(wchar_t)));
 }
 
 void LoadShortcuts() {
