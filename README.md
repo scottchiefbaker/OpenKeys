@@ -30,3 +30,4 @@ Pull requests are welcome and should target the `master` branch.
 
 * [ShortKeys](https://www.shortkeys.com/)
 * [TextExpander](https://textexpander.com/)
+* [AutoHotkey](https://www.autohotkey.com/)
