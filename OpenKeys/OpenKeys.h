@@ -1,3 +1,20 @@
 #pragma once
 
 #include "resource.h"
+#include <shellapi.h>
+
+///////////////////////////////////////////////////////////////////////////
+// Helper functions
+///////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////
+// Example to open the OpenKeys app data directory in Windows Explorer
+///////////////////////////////////////////////////////////////////////////
+// std::wstring appDataDir = GetAppDataDir() + L"/OpenKeys/";
+// OpenFolderInExplorer(appDataDir.c_str());
+
+// Open a folder in Windows Explorer
+void OpenFolderInExplorer(const wchar_t* folderPath)
+{
+    ShellExecuteW(NULL, L"open", folderPath, NULL, NULL, SW_SHOWNORMAL);
+}
