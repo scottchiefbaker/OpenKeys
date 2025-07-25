@@ -3,7 +3,7 @@
     "prefix": "`",
     "shortcuts": {
 		"openkeys": "Welcome to Openkeys! (Type `about)\n",
-		"about": "OpenKeys is a free and open source text replacement software\n",fsdfsd
+		"about": "OpenKeys is a free and open source text replacement software\n"
     },
     "start_minimized": false,
     "version": "demo"
