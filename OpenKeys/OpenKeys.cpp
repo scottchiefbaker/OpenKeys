@@ -22,6 +22,8 @@
 std::wstring VERSION_STRING   = L"0.3.0";
 std::wstring WINDOW_TITLE_STR = L"OpenKeys v" + VERSION_STRING;
 
+uint8_t DEBUG_LEVEL = 0;
+
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
 
@@ -290,6 +292,11 @@ void LoadDataFromJson(nlohmann::json jsonData) {
 
         }
         shortcuts[key] = value;
+    }
+
+    // Debug is optional... if it's not in the JSON then it stays at 0
+    if (JsonHasKey(jsonData, "debug")) {
+        DEBUG_LEVEL = jsonData["debug"];
     }
 }
 
