@@ -9,10 +9,9 @@
 #include <iostream>
 #include <shellapi.h>
 #include <wininet.h>
-#pragma comment(lib, "wininet.lib")
-
-std::ofstream LOG; // Global log file stream
 #include "OpenKeys.h"
+
+#pragma comment(lib, "wininet.lib")
 
 #define MAX_LOADSTRING 100
 #define WM_SENDKEYS (WM_USER + 1)
@@ -24,10 +23,10 @@ std::ofstream LOG; // Global log file stream
 // When this version is changed, please also change installer/Package.wxs line #6
 std::wstring VERSION_STRING   = L"0.3.1";
 std::wstring WINDOW_TITLE_STR = L"OpenKeys v" + VERSION_STRING;
-uint8_t DEBUG_LEVEL = 0;
+uint8_t DEBUG_LEVEL           = 0;
 
 NOTIFYICONDATA nid = {};
-HMENU hTrayMenu = nullptr;
+HMENU hTrayMenu    = nullptr;
 
 // Keyboard stuff
 HHOOK hKeyboardHook;
@@ -42,9 +41,9 @@ std::string json_default_url = "https://raw.githubusercontent.com/feive7/OpenKey
 
 // Configurable stuff
 bool START_MINIMIZED = false;
-bool enableLogging = true;
-int inputMethod = METHOD_SENDKEYS;
-bool easterEgg = false;
+bool enableLogging   = true;
+int inputMethod      = METHOD_SENDKEYS;
+bool easterEgg       = false;
 std::wstring prefix;
 std::wstring gotochar;
 std::wstring version;
@@ -54,7 +53,7 @@ HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
 
 // Scroll bar variables
-int scrollY = 0;
+int scrollY    = 0;
 int maxScrollY = 0;
 
 // Global variable for path to JSON file
@@ -65,7 +64,7 @@ HANDLE hHandle;
 
 // Flags
 bool JSON_FILE_LOADED = false;
-bool JSON_URL_LOADED = false;
+bool JSON_URL_LOADED  = false;
 
 void UpdateDisplayedTextFromShortcuts() {
     displayedText = L"";

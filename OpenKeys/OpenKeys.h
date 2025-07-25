@@ -8,6 +8,9 @@
 #include <iomanip>
 #include <iostream>
 
+// Global log file stream
+std::ofstream LOG;
+
 // Prototypes for helper functions
 std::string wstringToString(const std::wstring& wstr);
 size_t log_line(std::string line);
