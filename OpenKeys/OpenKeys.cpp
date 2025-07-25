@@ -736,7 +736,10 @@ void PasteKeys() {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
     case WM_COMMAND: {
-        int wmId = LOWORD(wParam);
+        int wmId                = LOWORD(wParam);
+        std::wstring appDataDir = GetAppDataDir() + L"\\OpenKeys\\";
+        std::wstring tmp_str    = L"";
+
         // Parse the menu selections:
         switch (wmId) {
         case IDM_ABOUT:
@@ -746,6 +749,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             log_line("Reloaded JSON file");
             LoadShortcuts();
             UpdateDisplayedTextFromShortcuts();
+            break;
+        case IDM_FILE_OPENDATA:
+            // Open the OpenKeys %APPDATA% directory in Windows Explorer
+            if (!DirectoryExists(appDataDir)) {
+                ErrorMessage(65413, L"OpenKeys directory not found in %APPDATA%");
+                break;
+            }
+
+            OpenFolderInExplorer(appDataDir.c_str());
+            tmp_str = L"Opened %APPDATA% folder: " + appDataDir;
+            log_line(tmp_str);
             break;
         case IDM_EXIT:
             CloseWindowAndExit();
