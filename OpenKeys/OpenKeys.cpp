@@ -19,7 +19,10 @@
 #define METHOD_SENDKEYS 0
 #define METHOD_COPYPASTE 1
 
-std::wstring VERSION_STRING = L"0.3.0";
+std::wstring VERSION_STRING   = L"0.3.0";
+std::wstring WINDOW_TITLE_STR = L"OpenKeys v" + VERSION_STRING;
+
+uint8_t DEBUG_LEVEL = 0;
 
 NOTIFYICONDATA nid = {};
 HMENU hTrayMenu = nullptr;
@@ -302,6 +305,11 @@ void LoadDataFromJson(nlohmann::json jsonData) {
         }
         shortcuts[key] = value;
     }
+
+    // Debug is optional... if it's not in the JSON then it stays at 0
+    if (JsonHasKey(jsonData, "debug")) {
+        DEBUG_LEVEL = jsonData["debug"];
+    }
 }
 
 std::wstring GetAppDataDir() {
@@ -363,14 +371,17 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                 }
                 // TO-DO: make a switch-case statement for every special key or fix it in a better way
 
-                LPCWSTR text = L"OpenKeys - ";
+                if (DEBUG_LEVEL > 0) {
+                    LPCWSTR text = WINDOW_TITLE_STR.c_str();
 
-                WCHAR concat[256] = {};
-                wcscpy_s(concat, text);       // copy "Hello"
-                wcscat_s(concat, unicodeChar);         // add the Unicode character
+                    WCHAR buf[256] = {};
+                    wcscpy_s(buf, text);        // start with the Windows title
+                    wcscat_s(buf, L" - ");      // append the -
+                    wcscat_s(buf, unicodeChar); // add the Unicode character of the last char
 
-                // Set the window text
-                SetWindowText(g_hWnd, concat);
+                    // Set the window text
+                    SetWindowText(g_hWnd, buf);
+                }
                 
                 // If we're larger than 20 characters we erase the first char to keep the buffer manageable
                 if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);
