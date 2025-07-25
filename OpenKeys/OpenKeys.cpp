@@ -91,7 +91,29 @@ size_t log_line(std::string line) {
 
     return 1;
 }
+LPCSTR WcharToLpcstr(const WCHAR* wideString) {
+    if (!wideString) {
+        return nullptr;
+    }
 
+    // Determine the required buffer size for the multibyte string
+    int bufferSize = WideCharToMultiByte(CP_ACP, 0, wideString, -1, NULL, 0, NULL, NULL);
+    if (bufferSize == 0) {
+        // Handle error
+        return nullptr;
+    }
+
+    // Allocate buffer for the multibyte string
+    std::vector<char> buffer(bufferSize);
+
+    // Perform the conversion
+    WideCharToMultiByte(CP_ACP, 0, wideString, -1, buffer.data(), bufferSize, NULL, NULL);
+
+    // Return a pointer to the converted string (ensure its lifetime is managed)
+    // Note: Returning a raw pointer to a local vector's data is unsafe if the vector goes out of scope.
+    // For practical use, consider returning std::string or dynamically allocating and managing memory.
+    return buffer.data(); // This is for demonstration; use with caution.
+}
 // Convert a UTF-8 string to a wide string
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
@@ -329,7 +351,15 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                 }
                 // TO-DO: make a switch-case statement for every special key or fix it in a better way
 
+                LPCWSTR text = L"OpenKeys - ";
 
+                WCHAR concat[256] = {};
+                wcscpy_s(concat, text);       // copy "Hello"
+                wcscat_s(concat, unicodeChar);         // add the Unicode character
+
+                // Set the window text
+                SetWindowText(g_hWnd, concat);
+                
                 // If we're larger than 20 characters we erase the first char to keep the buffer manageable
                 if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);
 
