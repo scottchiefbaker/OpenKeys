@@ -160,20 +160,33 @@ bool DirectoryExists(const std::wstring& dirPath) {
     return (attribs != INVALID_FILE_ATTRIBUTES) && (attribs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-// Update the status bar with a given text
+// Update the status bar with a given text - ANSI version
 void UpdateStatusBar(HWND hStatus, int part, const char* text) {
-    // Calculate required buffer size
-    int wideSize = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
+    // Convert to wide string
+    int len = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
+    if (len > 0) {
+        std::wstring wideText(len, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, text, -1, &wideText[0], len);
+        SendMessageW(hStatus, SB_SETTEXTW, part, (LPARAM)wideText.c_str());
+    }
+}
 
-    // Allocate buffer
-    wchar_t* wideText = (wchar_t*)malloc(wideSize * sizeof(wchar_t));
+// Update the status bar with a given text - Unicode version
+void UpdateStatusBar(HWND hStatus, int part, const wchar_t* text) {
+    SendMessageW(hStatus, SB_SETTEXTW, part, (LPARAM)text);
+}
 
-    // Convert
-    MultiByteToWideChar(CP_UTF8, 0, text, -1, wideText, wideSize);
+// Get the current date and time in a human-readable format
+std::wstring GetDateTimeHuman()
+{
+    // Get current time
+    std::time_t now = std::time(nullptr);
+    std::tm localTime;
+    localtime_s(&localTime, &now);
 
-    // Update status bar
-    SendMessage(hStatus, SB_SETTEXT, part, (LPARAM)wideText);
+    // Format: YYYY-MM-DD HH:MM:SS
+    wchar_t buffer[100];
+    wcsftime(buffer, sizeof(buffer) / sizeof(wchar_t), L"%B %d, %I:%M %p", &localTime);
 
-    // Clean up
-    free(wideText);
+    return std::wstring(buffer);
 }
