@@ -19,7 +19,7 @@
 #define METHOD_SENDKEYS 0
 #define METHOD_COPYPASTE 1
 
-std::wstring VERSION_STRING   = L"0.3.0";
+std::wstring VERSION_STRING   = L"0.3.1";
 std::wstring WINDOW_TITLE_STR = L"OpenKeys v" + VERSION_STRING;
 
 uint8_t DEBUG_LEVEL = 0;
