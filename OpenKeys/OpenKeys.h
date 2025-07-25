@@ -127,3 +127,9 @@ void AddToStartup() {
     LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hkey); //Creates a key
     LONG status = RegSetValueEx(hkey, L"MyApp", 0, REG_SZ, (BYTE*)progPath.c_str(), static_cast<DWORD>((progPath.size() + 1) * sizeof(wchar_t)));
 }
+
+// Check if a directory exists on the filesystem
+bool DirectoryExists(const std::wstring& dirPath) {
+    DWORD attribs = GetFileAttributesW(dirPath.c_str());
+    return (attribs != INVALID_FILE_ATTRIBUTES) && (attribs & FILE_ATTRIBUTE_DIRECTORY);
+}
