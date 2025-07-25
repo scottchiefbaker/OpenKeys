@@ -21,7 +21,7 @@
 #define METHOD_COPYPASTE 1
 
 // When this version is changed, please also change installer/Package.wxs line #6
-std::wstring VERSION_STRING   = L"0.3.1";
+std::wstring VERSION_STRING   = L"0.3.2";
 std::wstring WINDOW_TITLE_STR = L"OpenKeys v" + VERSION_STRING;
 uint8_t DEBUG_LEVEL           = 0;
 
