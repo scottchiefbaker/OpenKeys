@@ -159,3 +159,21 @@ bool DirectoryExists(const std::wstring& dirPath) {
     DWORD attribs = GetFileAttributesW(dirPath.c_str());
     return (attribs != INVALID_FILE_ATTRIBUTES) && (attribs & FILE_ATTRIBUTE_DIRECTORY);
 }
+
+// Update the status bar with a given text
+void UpdateStatusBar(HWND hStatus, int part, const char* text) {
+    // Calculate required buffer size
+    int wideSize = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
+
+    // Allocate buffer
+    wchar_t* wideText = (wchar_t*)malloc(wideSize * sizeof(wchar_t));
+
+    // Convert
+    MultiByteToWideChar(CP_UTF8, 0, text, -1, wideText, wideSize);
+
+    // Update status bar
+    SendMessage(hStatus, SB_SETTEXT, part, (LPARAM)wideText);
+
+    // Clean up
+    free(wideText);
+}
