@@ -3,7 +3,7 @@
 		Id="OpenKeys.test"
 		Name="OpenKeys"
 		Manufacturer="RolandSoft"
-		Version="0.3.1"
+		Version="0.3.2"
 		UpgradeCode="ad55082a-c063-4295-8731-19791eab93dc">
 
 		<MediaTemplate EmbedCab="yes" />

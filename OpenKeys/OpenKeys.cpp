@@ -9,10 +9,9 @@
 #include <iostream>
 #include <shellapi.h>
 #include <wininet.h>
-#pragma comment(lib, "wininet.lib")
-
-std::ofstream LOG; // Global log file stream
 #include "OpenKeys.h"
+
+#pragma comment(lib, "wininet.lib")
 
 #define MAX_LOADSTRING 100
 #define WM_SENDKEYS (WM_USER + 1)
@@ -22,12 +21,12 @@ std::ofstream LOG; // Global log file stream
 #define METHOD_COPYPASTE 1
 
 // When this version is changed, please also change installer/Package.wxs line #6
-std::wstring VERSION_STRING   = L"0.3.1";
+std::wstring VERSION_STRING   = L"0.3.2";
 std::wstring WINDOW_TITLE_STR = L"OpenKeys v" + VERSION_STRING;
-uint8_t DEBUG_LEVEL = 0;
+uint8_t DEBUG_LEVEL           = 0;
 
 NOTIFYICONDATA nid = {};
-HMENU hTrayMenu = nullptr;
+HMENU hTrayMenu    = nullptr;
 
 // Keyboard stuff
 HHOOK hKeyboardHook;
@@ -42,9 +41,9 @@ std::string json_default_url = "https://raw.githubusercontent.com/feive7/OpenKey
 
 // Configurable stuff
 bool START_MINIMIZED = false;
-bool enableLogging = true;
-int inputMethod = METHOD_SENDKEYS;
-bool easterEgg = false;
+bool enableLogging   = true;
+int inputMethod      = METHOD_SENDKEYS;
+bool easterEgg       = false;
 std::wstring prefix;
 std::wstring gotochar;
 std::wstring version;
@@ -54,7 +53,7 @@ HWND g_hWnd = nullptr;
 std::wstring pendingReplacement;
 
 // Scroll bar variables
-int scrollY = 0;
+int scrollY    = 0;
 int maxScrollY = 0;
 
 // Global variable for path to JSON file
@@ -65,7 +64,7 @@ HANDLE hHandle;
 
 // Flags
 bool JSON_FILE_LOADED = false;
-bool JSON_URL_LOADED = false;
+bool JSON_URL_LOADED  = false;
 
 void UpdateDisplayedTextFromShortcuts() {
     displayedText = L"";
@@ -233,7 +232,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
         // Keydown event
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
             BYTE keyboardState[256];
-            GetKeyboardState(keyboardState);
+            bool ok = GetKeyboardState(keyboardState);
 
             WCHAR unicodeChar[4] = {};
             UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC);
