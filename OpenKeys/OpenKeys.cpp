@@ -232,7 +232,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
         // Keydown event
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
             BYTE keyboardState[256];
-            GetKeyboardState(keyboardState);
+            bool ok = GetKeyboardState(keyboardState);
 
             WCHAR unicodeChar[4] = {};
             UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC);
