@@ -89,7 +89,11 @@ void UpdateDisplayedTextFromShortcuts() {
             }
 
             displayedText += L"\n";
-            displayedText += L"Shortcuts Version: " + version;
+
+            char buf[100];
+            snprintf(buf, sizeof(buf), "Shortcuts: %ls", version.c_str());
+
+            UpdateStatusBar(hStatus, 2, buf);
         }
         else {
             displayedText += L"No JSON file was loaded";
@@ -293,7 +297,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
 
                             // Update the status bar with the shortcut trigger
                             get_datetime_string();
-                            snprintf(buffer, sizeof(buffer), "%s: Shortcut '%ls' triggered", get_datetime_string().c_str(), pair.first.c_str());
+                            snprintf(buffer, sizeof(buffer), "%ls: Shortcut '%ls' triggered", GetDateTimeHuman().c_str(), pair.first.c_str());
 
                             UpdateStatusBar(hStatus, 0, buffer);
                         }
@@ -855,10 +859,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
             // This keeps the dynamic sizing of the status bar
             {
-                RECT rect;
-                GetClientRect(hWnd, &rect);
-                int parts[2] = { rect.right - 100, -1 };
-                SendMessage(hStatus, SB_SETPARTS, 2, (LPARAM)parts);
+                RECT rcClient;
+                GetClientRect(hWnd, &rcClient);
+                int width = rcClient.right;
+
+                const int fixedWidth = 150;
+
+                int parts[3];
+                parts[0] = max(0, width - 2 * fixedWidth);
+                parts[1] = parts[0] + fixedWidth;
+                parts[2] = -1;
+
+                SendMessage(hStatus, SB_SETPARTS, 3, (LPARAM)parts);
             }
 
             // Update scroll bar when window is resized
@@ -960,11 +972,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             // Optionally, set number of parts
             RECT rect;
             GetClientRect(hWnd, &rect);
+            int width = rect.right;
 
-            int parts[2] = { rect.right - 150, -1 }; // Two parts: Flexible and 150 pixels wide
-            SendMessage(hStatus, SB_SETPARTS, 2, (LPARAM)parts);
-            SendMessage(hStatus, SB_SETTEXT,  0, (LPARAM)L"");   // Init the status bar with empty text
-            SendMessage(hStatus, SB_SETTEXT,  1, (LPARAM)L"");   // Init the status bar with empty text
+            // Fixed sizes for parts 2 and 3
+            const int fixedWidth = 150;
+
+            // Calculate the widths (positions) for SB_SETPARTS
+            int parts[3];
+            parts[0] = width - 2 * fixedWidth; // flexible part
+            parts[1] = parts[0] + fixedWidth;  // 150 pixels
+            parts[2] = -1;                     // 150 pixels (extends to the right edge)
+
+            SendMessage(hStatus, SB_SETPARTS, 3, (LPARAM)parts);
+
+            // Initalize the status bar with empty text
+            UpdateStatusBar(hStatus, 0, L"");
+            UpdateStatusBar(hStatus, 1, L"");
+            UpdateStatusBar(hStatus, 2, L"");
 
             break;
         }
