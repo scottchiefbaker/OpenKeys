@@ -97,31 +97,6 @@ size_t log_line(std::wstring line) {
     return 1;
 }
 
-LPCSTR WcharToLpcstr(const WCHAR* wideString) {
-    if (!wideString) {
-        return nullptr;
-    }
-
-    // Determine the required buffer size for the multibyte string
-    int bufferSize = WideCharToMultiByte(CP_ACP, 0, wideString, -1, NULL, 0, NULL, NULL);
-    if (bufferSize == 0) {
-        // Handle error
-        return nullptr;
-    }
-
-    // Allocate buffer for the multibyte string
-    std::vector<char> buffer(bufferSize);
-
-    // Perform the conversion
-    WideCharToMultiByte(CP_ACP, 0, wideString, -1, buffer.data(), bufferSize, NULL, NULL);
-
-    // Return a pointer to the converted string (ensure its lifetime is managed)
-    // Note: Returning a raw pointer to a local vector's data is unsafe if the vector goes out of scope.
-    // For practical use, consider returning std::string or dynamically allocating and managing memory.
-    return buffer.data(); // This is for demonstration; use with caution.
-}
-
-
 // Convert a UTF-8 string to a wide string
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
