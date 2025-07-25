@@ -142,8 +142,15 @@ void InfoMessage(LPCWSTR title, LPCWSTR contents) {
 void InfoMessage(LPCWSTR contents) {
     InfoMessage(L"Info", contents);
 }
+void WarningMessage(LPCWSTR title, LPCWSTR contents) {
+    MessageBox(NULL, contents, title, MB_OK | MB_ICONWARNING);
+}
 void ErrorMessage(LPCWSTR title, LPCWSTR contents) {
     MessageBox(NULL, contents, title, MB_OK | MB_ICONERROR);
+}
+void ErrorMessage(int error_id, LPCWSTR contents) {
+    std::wstring title = L"Error " + std::to_wstring(error_id);
+    ErrorMessage(title.c_str(), contents);
 }
 void UpdateDisplayedTextFromShortcuts() {
     displayedText = L"";
@@ -216,6 +223,11 @@ nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
 	}
 
     JSON_FILE_LOADED = true; // Could find file
+    
+    if (!nlohmann::json::accept(file)) {
+        ErrorMessage(16, L"Invalid JSON. Please check formatting");
+        exit(16);
+    }
 
     nlohmann::json jsonData;
     file >> jsonData;
@@ -469,7 +481,7 @@ void LoadShortcuts() {
 
         if (!file.good() || !std::filesystem::exists(json_path)) {
             log_line("Failed to create shortcuts.json file.");
-            MessageBox(NULL, L"Failed to create shortcuts.json file. Please check permissions.", L"Error", MB_ICONERROR);
+            ErrorMessage(12, L"Failed to create shortcuts.json file. Please check permissions.");
             return;
         }
 
@@ -482,7 +494,7 @@ void LoadShortcuts() {
         nlohmann::json jsonURL = LoadJsonFromUrl(jsonFILE["external_url"]);
         if (jsonURL.empty()) {
 			log_line("Failed to load JSON from URL: " + jsonFILE["external_url"].get<std::string>());
-            MessageBox(NULL, L"The URL you provided does not contain valid JSON. Please verify URL.", L"Warning", MB_ICONWARNING);
+            WarningMessage(L"Warning", L"The URL you provided does not contain valid JSON. URL ignored.");
 			return;
 		}
 
@@ -665,7 +677,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
    // Initialize Keyboard Hook
    hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, hInst, 0);
    if (!hKeyboardHook) {
-       MessageBox(NULL, L"Keyboard hook failed!", L"Error", MB_ICONERROR);
+       ErrorMessage(62, L"Keyboard hook failed!");
        return FALSE;
    }
 
