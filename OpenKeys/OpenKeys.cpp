@@ -21,7 +21,6 @@
 
 std::wstring VERSION_STRING   = L"0.3.1";
 std::wstring WINDOW_TITLE_STR = L"OpenKeys v" + VERSION_STRING;
-
 uint8_t DEBUG_LEVEL = 0;
 
 NOTIFYICONDATA nid = {};
@@ -227,13 +226,11 @@ nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
 
     JSON_FILE_LOADED = true; // Could find file
     
-    if (!nlohmann::json::accept(file)) {
-        ErrorMessage(16, L"Invalid JSON. Please check formatting");
-        exit(16);
+    nlohmann::json jsonData = nlohmann::json::parse(file, nullptr, false);
+    if (jsonData.is_discarded()) {
+        ErrorMessage(12, L"JSON is invalid. Please check formatting");
+        exit(12);
     }
-
-    nlohmann::json jsonData;
-    file >> jsonData;
     file.close();
 
     std::string version = "";
