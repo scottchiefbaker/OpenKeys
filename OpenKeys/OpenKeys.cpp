@@ -241,25 +241,43 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             BYTE keyboardState[256];
             bool ok = GetKeyboardState(keyboardState);
 
+            // If GetKeyboardState fails, we bail out
+            if (!ok) {
+                log_line("GetKeyboardState failed???");
+                return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+            }
+
+            // This makes sure that when you press shift + 3 for the # character
+            // it registers correctly
+            if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
+                keyboardState[VK_SHIFT] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
+                keyboardState[VK_LSHIFT] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_RSHIFT) & 0x8000) {
+                keyboardState[VK_RSHIFT] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_CONTROL) & 0x8000) {
+                keyboardState[VK_CONTROL] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_MENU) & 0x8000) {    // Alt Key
+                keyboardState[VK_MENU] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_CAPITAL) & 0x0001) { // Capslock
+                keyboardState[VK_CAPITAL] |= 0x01;
+            }
+
+            // Map the virtual key code to a scan code
+            UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC_EX);
+
+            // Convert the virtual key code to a Unicode character
             WCHAR unicodeChar[4] = {};
-            UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC);
-            ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
+            int result           = ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
+
             if (unicodeChar[0] != 8 && unicodeChar[0] != 0) { // If character is not backspace
-                // I apologize in advance for the following if statement, this is probably the worst workaround I have ever made, I will attempt at explaining everything
-                // special characters are finnicky and sometimes register as their unicode value (e.g. # is 3, so we have to check for that)
-                if (unicodeChar[0] == '3') { // For whatever reason, windows hates me and doesn't register shift sometimes, so we have to double check
-                    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) { // If shift is pressed, we add the special character
-                        keyBuffer += L'#'; // Add the # character
-                    }
-                }
-                else if (unicodeChar[0] == '4') { // Same for $ character
-                    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
-                        keyBuffer += L'$';
-                    }
-                }
-                else {
-                    keyBuffer += unicodeChar[0]; // Otherwise proceed as normal
-                }
+                keyBuffer += unicodeChar[0]; // Otherwise proceed as normal
+
                 // TO-DO: make a switch-case statement for every special key or fix it in a better way
 
                 // If debug is enabled we log the last keypress
