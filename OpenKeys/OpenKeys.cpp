@@ -386,9 +386,10 @@ void CloseWindowAndExit() {
     PostQuitMessage(0);
 }
 
-void LoadShortcuts() {
+int8_t LoadShortcuts() {
     shortcuts.clear();
     nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
+    uint8_t ret             = 0; // Default return value
 
 	// If there is no local JSON file, we download the default one from github
     if (jsonFILE.empty()) {
@@ -409,7 +410,7 @@ void LoadShortcuts() {
         if (!file.good() || !std::filesystem::exists(json_path)) {
             log_line("Failed to create shortcuts.json file.");
             ErrorMessage(12, L"Failed to create shortcuts.json file. Please check permissions.");
-            return;
+            return -8;
         }
 
         jsonFILE = LoadJsonFromFile(json_path);
@@ -422,7 +423,7 @@ void LoadShortcuts() {
         if (jsonURL.empty()) {
             log_line("Failed to load JSON from URL: " + jsonFILE["external_url"].get<std::string>());
             WarningMessage(L"Warning", L"The URL you provided does not contain valid JSON. URL ignored.");
-            return;
+            return -9;
         }
 
         // The local version and remote versions are different
@@ -448,19 +449,31 @@ void LoadShortcuts() {
                 log_line("Overwrote local JSON with the one from the URL");
 
                 jsonFILE = LoadJsonFromFile(json_path); // Reload the JSON from the file
+
+                ret = 1; // We got a new JSON file from the URL
             }
             // If the user chooses not to overwrite, we use the local JSON
             else {
                 log_line("Did not overwrite local JSON, using local data");
+
+				ret = -1; // No need to overwrite, user chose not to
             }
         }
         else if (jsonURL["version"] == jsonFILE["version"]) {
             log_line("Local and remote versions are the same");
+
+			ret = -2; // No need to overwrite, versions match
         }
 
     }
+    else {
+		ret = -3; // No external URL, so we just use the local data
+    }
+
     LoadDataFromJson(jsonFILE);
     UpdateDisplayedTextFromShortcuts();
+
+    return ret;
 }
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -793,10 +806,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
             break;
         case IDM_REFRESH_BUTTON:
-            log_line("Reloaded JSON file");
-            LoadShortcuts();
-            UpdateDisplayedTextFromShortcuts();
-            break;
+            {
+                log_line("Reloaded JSON file");
+                int8_t status = LoadShortcuts();
+
+                if (status == 1) {
+                    InfoMessage(L"Loaded new shortcuts from server");
+                }
+                else if (status == -2) {
+                    InfoMessage(L"Remote server does not have new shortcuts file");
+                }
+
+                UpdateDisplayedTextFromShortcuts();
+                break;
+          }
         case IDM_FILE_OPENDATA:
             // Open the OpenKeys %APPDATA% directory in Windows Explorer
             if (!DirectoryExists(appDataDir)) {
