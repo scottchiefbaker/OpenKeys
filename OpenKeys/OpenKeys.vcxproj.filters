@@ -51,5 +51,11 @@
     <Image Include="icon1.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="Image.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="OpenKeys.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

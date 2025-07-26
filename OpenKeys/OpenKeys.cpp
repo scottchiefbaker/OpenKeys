@@ -1,5 +1,6 @@
 #include "framework.h"
 #include <windows.h>
+#include <commctrl.h>    // For the status bar
 #include <string>
 #include <random>
 #include <json.hpp>
@@ -50,6 +51,8 @@ std::wstring version;
 std::map<std::wstring, std::wstring> shortcuts;
 
 HWND g_hWnd = nullptr;
+HWND hStatus; // Status bar handle
+HINSTANCE g_hInstance = NULL;
 std::wstring pendingReplacement;
 
 // Scroll bar variables
@@ -86,7 +89,11 @@ void UpdateDisplayedTextFromShortcuts() {
             }
 
             displayedText += L"\n";
-            displayedText += L"Shortcuts Version: " + version;
+
+            char buf[100];
+            snprintf(buf, sizeof(buf), "Shortcuts: %ls", version.c_str());
+
+            UpdateStatusBar(hStatus, 2, buf);
         }
         else {
             displayedText += L"No JSON file was loaded";
@@ -234,39 +241,54 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             BYTE keyboardState[256];
             bool ok = GetKeyboardState(keyboardState);
 
+            // If GetKeyboardState fails, we bail out
+            if (!ok) {
+                log_line("GetKeyboardState failed???");
+                return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+            }
+
+            // This makes sure that when you press shift + 3 for the # character
+            // it registers correctly
+            if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
+                keyboardState[VK_SHIFT] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
+                keyboardState[VK_LSHIFT] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_RSHIFT) & 0x8000) {
+                keyboardState[VK_RSHIFT] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_CONTROL) & 0x8000) {
+                keyboardState[VK_CONTROL] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_MENU) & 0x8000) {    // Alt Key
+                keyboardState[VK_MENU] |= 0x80;
+            }
+            if (GetAsyncKeyState(VK_CAPITAL) & 0x0001) { // Capslock
+                keyboardState[VK_CAPITAL] |= 0x01;
+            }
+
+            // Map the virtual key code to a scan code
+            UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC_EX);
+
+            // Convert the virtual key code to a Unicode character
             WCHAR unicodeChar[4] = {};
-            UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC);
-            ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
+            int result           = ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
+
             if (unicodeChar[0] != 8 && unicodeChar[0] != 0) { // If character is not backspace
-                // I apologize in advance for the following if statement, this is probably the worst workaround I have ever made, I will attempt at explaining everything
-                // special characters are finnicky and sometimes register as their unicode value (e.g. # is 3, so we have to check for that)
-                if (unicodeChar[0] == '3') { // For whatever reason, windows hates me and doesn't register shift sometimes, so we have to double check
-                    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) { // If shift is pressed, we add the special character
-						keyBuffer += L'#'; // Add the # character
-					}
-				}
-				else if (unicodeChar[0] == '4') { // Same for $ character
-                    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
-                        keyBuffer += L'$';
-                    }
-                }
-                else {
-                    keyBuffer += unicodeChar[0]; // Otherwise proceed as normal
-                }
+                keyBuffer += unicodeChar[0]; // Otherwise proceed as normal
+
                 // TO-DO: make a switch-case statement for every special key or fix it in a better way
 
+                // If debug is enabled we log the last keypress
                 if (DEBUG_LEVEL > 0) {
-                    LPCWSTR text = WINDOW_TITLE_STR.c_str();
+                    char buffer[100];
+                    snprintf(buffer, sizeof(buffer), "Last: %ls", unicodeChar);
 
-                    WCHAR buf[256] = {};
-                    wcscpy_s(buf, text);        // start with the Windows title
-                    wcscat_s(buf, L" - ");      // append the -
-                    wcscat_s(buf, unicodeChar); // add the Unicode character of the last char
-
-                    // Set the window text
-                    SetWindowText(g_hWnd, buf);
+                    // Update the RIGHT status bar with the last key pressed
+                    UpdateStatusBar(hStatus, 1, buffer);
                 }
-                
+
                 // If we're larger than 20 characters we erase the first char to keep the buffer manageable
                 if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);
 
@@ -282,13 +304,29 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
 
                     // Compare the end of the buffer with the trigger string to see if we match this shortcut
                     int buff_matches = keyBuffer.compare(keyBuffer.size() - trigger.size(), trigger.size(), trigger) == 0;
+
+                    if (DEBUG_LEVEL >= 2) {
+                        char buffer[100];
+                        snprintf(buffer, sizeof(buffer), "Buf: %ls", keyBuffer.c_str());
+
+                        // Update the RIGHT status bar with the last key pressed
+                        UpdateStatusBar(hStatus, 1, buffer);
+                    }
+
                     if (buff_matches) {
                         keyBuffer.clear();
 
                         if (enableLogging) {
+                            // Log the shortcut trigger
                             char buffer[100];
                             snprintf(buffer, sizeof(buffer), "Shortcut '%ls' triggered", pair.first.c_str());
                             log_line(buffer);
+
+                            // Update the status bar with the shortcut trigger
+                            get_datetime_string();
+                            snprintf(buffer, sizeof(buffer), "%ls: Shortcut '%ls' triggered", GetDateTimeHuman().c_str(), pair.first.c_str());
+
+                            UpdateStatusBar(hStatus, 0, buffer);
                         }
 
                         pendingReplacement = pair.second;
@@ -302,7 +340,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             else if(unicodeChar[0] == 8) { // If it IS backspace, don't add to buffer, and remove last entry
                 if(keyBuffer.size() > 0) {
                     keyBuffer.pop_back();
-				}
+                }
             }
         }
     }
@@ -382,10 +420,10 @@ void LoadShortcuts() {
 
         nlohmann::json jsonURL = LoadJsonFromUrl(jsonFILE["external_url"]);
         if (jsonURL.empty()) {
-			log_line("Failed to load JSON from URL: " + jsonFILE["external_url"].get<std::string>());
+            log_line("Failed to load JSON from URL: " + jsonFILE["external_url"].get<std::string>());
             WarningMessage(L"Warning", L"The URL you provided does not contain valid JSON. URL ignored.");
-			return;
-		}
+            return;
+        }
 
         // The local version and remote versions are different
         if (jsonURL["version"] != jsonFILE["version"]) {
@@ -407,20 +445,20 @@ void LoadShortcuts() {
                 }
                 file.close();
 
-				log_line("Overwrote local JSON with the one from the URL");
+                log_line("Overwrote local JSON with the one from the URL");
 
                 jsonFILE = LoadJsonFromFile(json_path); // Reload the JSON from the file
-			}
+            }
             // If the user chooses not to overwrite, we use the local JSON
-			else {
-				log_line("Did not overwrite local JSON, using local data");
-			}
+            else {
+                log_line("Did not overwrite local JSON, using local data");
+            }
         }
         else if (jsonURL["version"] == jsonFILE["version"]) {
             log_line("Local and remote versions are the same");
         }
 
-	}
+    }
     LoadDataFromJson(jsonFILE);
     UpdateDisplayedTextFromShortcuts();
 }
@@ -436,6 +474,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ int       nCmdShow) {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
+
+    // Initialize global hInstance
+    g_hInstance = hInstance;
 
     // Code to prevent multiple instances from opening
     LPCWSTR szUniqueNamedMutex = L"screw_shortkeys_I_aint_paying_40_bucks";
@@ -492,6 +533,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Include the version in the title of the window
     std::wstring window_title = L"OpenKeys v" + VERSION_STRING;
     SetWindowText(g_hWnd, window_title.c_str());
+
+    INITCOMMONCONTROLSEX icex;
+    icex.dwSize = sizeof(icex);
+    icex.dwICC = ICC_BAR_CLASSES; // Needed for status bar
+    InitCommonControlsEx(&icex);
+
+    //SendMessage(hStatus, SB_SETTEXT, part_index, (LPARAM)L"New text");
 
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0)) {
@@ -833,6 +881,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             MinimizeToTray(hWnd);
         }
         else {
+            // Resize the status bar
+            SendMessage(hStatus, WM_SIZE, 0, 0);
+
+            // This keeps the dynamic sizing of the status bar
+            {
+                RECT rcClient;
+                GetClientRect(hWnd, &rcClient);
+                int width = rcClient.right;
+
+                const int fixedWidth = 150;
+
+                int parts[3];
+                parts[0] = max(0, width - 2 * fixedWidth);
+                parts[1] = parts[0] + fixedWidth;
+                parts[2] = -1;
+
+                SendMessage(hStatus, SB_SETPARTS, 3, (LPARAM)parts);
+            }
+
             // Update scroll bar when window is resized
             RECT rect;
             GetClientRect(hWnd, &rect);
@@ -916,6 +983,42 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
         }
     }
                     break;
+    case WM_CREATE:
+        {
+            hStatus = CreateWindowEx(
+                0,                       // no extended styles
+                STATUSCLASSNAME,         // status bar class
+                NULL,                    // no text initially
+                WS_CHILD | WS_VISIBLE,   // styles
+                0, 0, 0, 0,              // x, y, cx, cy
+                hWnd,                    // parent window
+                (HMENU)1,                // ID for status bar
+                g_hInstance,             // application instance
+                NULL);                   // no additional data
+
+            // Optionally, set number of parts
+            RECT rect;
+            GetClientRect(hWnd, &rect);
+            int width = rect.right;
+
+            // Fixed sizes for parts 2 and 3
+            const int fixedWidth = 150;
+
+            // Calculate the widths (positions) for SB_SETPARTS
+            int parts[3];
+            parts[0] = width - 2 * fixedWidth; // flexible part
+            parts[1] = parts[0] + fixedWidth;  // 150 pixels
+            parts[2] = -1;                     // 150 pixels (extends to the right edge)
+
+            SendMessage(hStatus, SB_SETPARTS, 3, (LPARAM)parts);
+
+            // Initalize the status bar with empty text
+            UpdateStatusBar(hStatus, 0, L"");
+            UpdateStatusBar(hStatus, 1, L"");
+            UpdateStatusBar(hStatus, 2, L"");
+
+            break;
+        }
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }

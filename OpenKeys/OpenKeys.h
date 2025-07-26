@@ -159,3 +159,34 @@ bool DirectoryExists(const std::wstring& dirPath) {
     DWORD attribs = GetFileAttributesW(dirPath.c_str());
     return (attribs != INVALID_FILE_ATTRIBUTES) && (attribs & FILE_ATTRIBUTE_DIRECTORY);
 }
+
+// Update the status bar with a given text - ANSI version
+void UpdateStatusBar(HWND hStatus, int part, const char* text) {
+    // Convert to wide string
+    int len = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
+    if (len > 0) {
+        std::wstring wideText(len, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, text, -1, &wideText[0], len);
+        SendMessageW(hStatus, SB_SETTEXTW, part, (LPARAM)wideText.c_str());
+    }
+}
+
+// Update the status bar with a given text - Unicode version
+void UpdateStatusBar(HWND hStatus, int part, const wchar_t* text) {
+    SendMessageW(hStatus, SB_SETTEXTW, part, (LPARAM)text);
+}
+
+// Get the current date and time in a human-readable format
+std::wstring GetDateTimeHuman()
+{
+    // Get current time
+    std::time_t now = std::time(nullptr);
+    std::tm localTime;
+    localtime_s(&localTime, &now);
+
+    // Format: YYYY-MM-DD HH:MM:SS
+    wchar_t buffer[100];
+    wcsftime(buffer, sizeof(buffer) / sizeof(wchar_t), L"%B %d, %I:%M %p", &localTime);
+
+    return std::wstring(buffer);
+}
