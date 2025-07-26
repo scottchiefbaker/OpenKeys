@@ -304,6 +304,15 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
 
                     // Compare the end of the buffer with the trigger string to see if we match this shortcut
                     int buff_matches = keyBuffer.compare(keyBuffer.size() - trigger.size(), trigger.size(), trigger) == 0;
+
+                    if (DEBUG_LEVEL >= 2) {
+                        char buffer[100];
+                        snprintf(buffer, sizeof(buffer), "Buf: %ls", keyBuffer.c_str());
+
+                        // Update the RIGHT status bar with the last key pressed
+                        UpdateStatusBar(hStatus, 1, buffer);
+                    }
+
                     if (buff_matches) {
                         keyBuffer.clear();
 
