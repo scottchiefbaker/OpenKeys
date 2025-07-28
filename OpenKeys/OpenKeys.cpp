@@ -11,6 +11,7 @@
 #include <shellapi.h>
 #include <wininet.h>
 #include "OpenKeys.h"
+#include "clipboard.h"
 
 #pragma comment(lib, "wininet.lib")
 #pragma comment(lib, "comctl32.lib")
@@ -741,30 +742,8 @@ void SendKeys(WPARAM wParam) {
     }
     SendInput(inputIndex, inputs, sizeof(INPUT));
 }
-std::string getClipboardContents() {
-    OpenClipboard(NULL);
-    HANDLE hData = GetClipboardData(CF_TEXT);
-    char* pszText = static_cast<char*>(GlobalLock(hData));
-    std::string text(pszText);
-    GlobalUnlock(hData);
-    CloseClipboard();
-    return text;
-}
-void copyToClipboard(const std::string& text) {
-    if (OpenClipboard(NULL)) {
-        EmptyClipboard();
-        HGLOBAL hg = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, text.size() + 1);
-        if (hg) {
-            char* data = static_cast<char*>(GlobalLock(hg));
-            if (data) {
-                strcpy_s(data, text.size() + 1, text.c_str());
-                GlobalUnlock(hg);
-                SetClipboardData(CF_TEXT, hg);
-            }
-        }
-        CloseClipboard();
-    }
-}
+
+// Paste the pending replacement text over the trigger word
 void PasteKeys() {
     std::string clipboardBuffer = getClipboardContents(); // Preserve original clipboard contents
     copyToClipboard(wstringToString(pendingReplacement)); // Copy the pending replacement
@@ -784,7 +763,8 @@ void PasteKeys() {
     Sleep(100);
     copyToClipboard(clipboardBuffer); // Copy original clipboard contents
 }
- //
+
+//
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
 //  PURPOSE: Processes messages for the main window.

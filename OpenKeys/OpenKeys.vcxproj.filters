@@ -30,6 +30,9 @@
     <ClInclude Include="json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="clipboard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OpenKeys.cpp">
@@ -46,12 +49,6 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="OpenKeys.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="icon1.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="Image.jpg">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="OpenKeys.bmp">
