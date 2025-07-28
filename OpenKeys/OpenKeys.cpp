@@ -13,6 +13,7 @@
 #include "OpenKeys.h"
 
 #pragma comment(lib, "wininet.lib")
+#pragma comment(lib, "comctl32.lib")
 
 #define MAX_LOADSTRING 100
 #define WM_SENDKEYS (WM_USER + 1)
