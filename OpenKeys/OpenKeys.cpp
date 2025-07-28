@@ -11,8 +11,10 @@
 #include <shellapi.h>
 #include <wininet.h>
 #include "OpenKeys.h"
+#include "clipboard.h"
 
 #pragma comment(lib, "wininet.lib")
+#pragma comment(lib, "comctl32.lib")
 
 #define MAX_LOADSTRING 100
 #define WM_SENDKEYS (WM_USER + 1)
@@ -22,7 +24,7 @@
 #define METHOD_COPYPASTE 1
 
 // When this version is changed, please also change installer/Package.wxs line #6
-std::wstring VERSION_STRING   = L"0.3.2";
+std::wstring VERSION_STRING   = L"0.3.3";
 std::wstring WINDOW_TITLE_STR = L"OpenKeys v" + VERSION_STRING;
 uint8_t DEBUG_LEVEL           = 0;
 
@@ -740,30 +742,8 @@ void SendKeys(WPARAM wParam) {
     }
     SendInput(inputIndex, inputs, sizeof(INPUT));
 }
-std::string getClipboardContents() {
-    OpenClipboard(NULL);
-    HANDLE hData = GetClipboardData(CF_TEXT);
-    char* pszText = static_cast<char*>(GlobalLock(hData));
-    std::string text(pszText);
-    GlobalUnlock(hData);
-    CloseClipboard();
-    return text;
-}
-void copyToClipboard(const std::string& text) {
-    if (OpenClipboard(NULL)) {
-        EmptyClipboard();
-        HGLOBAL hg = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, text.size() + 1);
-        if (hg) {
-            char* data = static_cast<char*>(GlobalLock(hg));
-            if (data) {
-                strcpy_s(data, text.size() + 1, text.c_str());
-                GlobalUnlock(hg);
-                SetClipboardData(CF_TEXT, hg);
-            }
-        }
-        CloseClipboard();
-    }
-}
+
+// Paste the pending replacement text over the trigger word
 void PasteKeys() {
     std::string clipboardBuffer = getClipboardContents(); // Preserve original clipboard contents
     copyToClipboard(wstringToString(pendingReplacement)); // Copy the pending replacement
@@ -783,7 +763,8 @@ void PasteKeys() {
     Sleep(100);
     copyToClipboard(clipboardBuffer); // Copy original clipboard contents
 }
- //
+
+//
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
 //  PURPOSE: Processes messages for the main window.

@@ -1,10 +1,11 @@
 ## 🗝️ What is OpenKeys?
 
-OpenKeys is a _free_ Windows program to simplify the repeated entry of text.
+OpenKeys is a _free_ Windows program that simplifies the repeated entry
+of text.
 
 ### 📦 Installation:
 
-Extract the `OpenKeys.zip` from the latest release to any directory on your
+Copy `OpenKeys.exe` from the latest release to any directory on your
 PC. We recommend `C:\Program Files\OpenKeys` but any directory will do.
 
 When you run OpenKeys for the first time a `shortcuts.json` will be created
@@ -25,6 +26,7 @@ Pull requests are welcome and should target the `master` branch.
 | ---------------- | ----------------------- |
 | @feive7          | Primary author          |
 | @scottchiefbaker | Assistant programmer    |
+| @jasterh         | Design consultant       |
 
 ### 🧰 Other tools similar to OpenKeys:
 
