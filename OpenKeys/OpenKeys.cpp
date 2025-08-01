@@ -278,7 +278,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             int result           = ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
 
             if (unicodeChar[0] != 8 && unicodeChar[0] != 0) { // If character is not backspace
-                keyBuffer += unicodeChar[0]; // Otherwise proceed as normal
+                keyBuffer += towlower(unicodeChar[0]); // Otherwise proceed as normal
 
                 // TO-DO: make a switch-case statement for every special key or fix it in a better way
 
