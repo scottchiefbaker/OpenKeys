@@ -375,6 +375,13 @@ void RestoreFromTray(HWND hWnd) {
     ShowWindow(hWnd, SW_RESTORE);
     Shell_NotifyIcon(NIM_DELETE, &nid);
 }
+bool CloseConfirmation() {
+    int response = MessageBox(g_hWnd, L"Are you sure you want to close OpenKeys?", L"Confirm Close", MB_ICONQUESTION | MB_YESNO);
+    if (response == IDYES) {
+        return true;
+    }
+    return false;
+}
 void CloseWindowAndExit() {
     log_line("Closing OpenKeys...\n");
     ReleaseMutex(hHandle);
@@ -813,7 +820,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             log_line(tmp_str);
             break;
         case IDM_EXIT:
-            CloseWindowAndExit();
+            if (CloseConfirmation()) {
+                // If user confirms, close the window
+                CloseWindowAndExit();
+            }
             break;
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
@@ -869,13 +879,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
                  break;
     case WM_CLOSE: {
         // Ask user if they want to close the window
-        int response = MessageBox(hWnd, L"Are you sure you want to close OpenKeys?", L"Confirm Close", MB_ICONQUESTION | MB_YESNO);
-        if (response == IDYES) {
+        if (CloseConfirmation()) {
+			// If user confirms, close the window
             CloseWindowAndExit();
-        }
-        else {
-            return 0; // Do not close the window
-        }
+		}
     }
                  break;
     case WM_DESTROY: {
