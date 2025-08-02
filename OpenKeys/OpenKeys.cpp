@@ -816,6 +816,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 
     }
                  break;
+    case WM_CLOSE: {
+        // Ask user if they want to close the window
+        int response = MessageBox(hWnd, L"Are you sure you want to close OpenKeys?", L"Confirm Close", MB_ICONQUESTION | MB_YESNO);
+        if (response == IDYES) {
+            CloseWindowAndExit();
+        }
+        else {
+            return 0; // Do not close the window
+        }
+    }
+                 break;
     case WM_DESTROY: {
         CloseWindowAndExit();
     }
