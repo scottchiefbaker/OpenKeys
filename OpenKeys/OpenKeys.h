@@ -8,6 +8,9 @@
 #include <iomanip>
 #include <iostream>
 
+// Global log file stream
+std::ofstream LOG;
+
 // Prototypes for helper functions
 std::string wstringToString(const std::wstring& wstr);
 size_t log_line(std::string line);
@@ -94,31 +97,6 @@ size_t log_line(std::wstring line) {
     return 1;
 }
 
-LPCSTR WcharToLpcstr(const WCHAR* wideString) {
-    if (!wideString) {
-        return nullptr;
-    }
-
-    // Determine the required buffer size for the multibyte string
-    int bufferSize = WideCharToMultiByte(CP_ACP, 0, wideString, -1, NULL, 0, NULL, NULL);
-    if (bufferSize == 0) {
-        // Handle error
-        return nullptr;
-    }
-
-    // Allocate buffer for the multibyte string
-    std::vector<char> buffer(bufferSize);
-
-    // Perform the conversion
-    WideCharToMultiByte(CP_ACP, 0, wideString, -1, buffer.data(), bufferSize, NULL, NULL);
-
-    // Return a pointer to the converted string (ensure its lifetime is managed)
-    // Note: Returning a raw pointer to a local vector's data is unsafe if the vector goes out of scope.
-    // For practical use, consider returning std::string or dynamically allocating and managing memory.
-    return buffer.data(); // This is for demonstration; use with caution.
-}
-
-
 // Convert a UTF-8 string to a wide string
 std::wstring Utf8ToWstring(const std::string& str) {
     if (str.empty()) return L"";
@@ -180,4 +158,35 @@ void AddToStartup() {
 bool DirectoryExists(const std::wstring& dirPath) {
     DWORD attribs = GetFileAttributesW(dirPath.c_str());
     return (attribs != INVALID_FILE_ATTRIBUTES) && (attribs & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+// Update the status bar with a given text - ANSI version
+void UpdateStatusBar(HWND hStatus, int part, const char* text) {
+    // Convert to wide string
+    int len = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
+    if (len > 0) {
+        std::wstring wideText(len, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, text, -1, &wideText[0], len);
+        SendMessageW(hStatus, SB_SETTEXTW, part, (LPARAM)wideText.c_str());
+    }
+}
+
+// Update the status bar with a given text - Unicode version
+void UpdateStatusBar(HWND hStatus, int part, const wchar_t* text) {
+    SendMessageW(hStatus, SB_SETTEXTW, part, (LPARAM)text);
+}
+
+// Get the current date and time in a human-readable format
+std::wstring GetDateTimeHuman()
+{
+    // Get current time
+    std::time_t now = std::time(nullptr);
+    std::tm localTime;
+    localtime_s(&localTime, &now);
+
+    // Format: YYYY-MM-DD HH:MM:SS
+    wchar_t buffer[100];
+    wcsftime(buffer, sizeof(buffer) / sizeof(wchar_t), L"%B %d, %I:%M %p", &localTime);
+
+    return std::wstring(buffer);
 }

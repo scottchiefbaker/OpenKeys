@@ -132,9 +132,11 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);comctl32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="clipboard.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="OpenKeys.h" />
@@ -148,8 +150,6 @@
     <ResourceCompile Include="OpenKeys.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="icon1.ico" />
-    <Image Include="Image.jpg" />
     <Image Include="OpenKeys.bmp" />
     <Image Include="OpenKeys.ico" />
     <Image Include="small.ico" />
