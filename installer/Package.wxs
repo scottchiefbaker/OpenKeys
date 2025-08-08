@@ -25,6 +25,20 @@
 			</Directory>
 		</StandardDirectory>
 
+		<!-- Start Menu shortcut -->
+
+		<StandardDirectory Id="ProgramMenuFolder">
+			<Component Id="StartMenuComponent" Guid="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
+				<Shortcut Id="OpenKeysStartMenuShortcut"
+					Name="OpenKeys"
+					Description="Launch OpenKeys application"
+					Target="[INSTALLFOLDER]OpenKeys.exe"
+					WorkingDirectory="INSTALLFOLDER"
+					Directory="ProgramMenuFolder" />
+				<RegistryValue Root="HKCU" Key="Software\RolandSoft\OpenKeys" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+			</Component>
+		</StandardDirectory>
+
 		<!-- JSON in %APPDATA% -->
 
 		<StandardDirectory Id="AppDataFolder">
@@ -50,6 +64,7 @@
 		<Feature Id="ProductFeature" Title="OpenKeys" Level="1">
 			<ComponentRef Id="OpenKeysExeComponent" />
 			<ComponentRef Id="JSONComponent" />
+			<ComponentRef Id="StartMenuComponent" />
 		</Feature>
 
 	</Package>
