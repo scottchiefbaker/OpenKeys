@@ -249,36 +249,28 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                 return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
             }
 
-            // This makes sure that when you press shift + 3 for the # character
-            // it registers correctly
-            if (GetAsyncKeyState(VK_SHIFT) & 0x8000) {
+            // Map the virtual key code to a scan code
+            UINT scanCode        = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC_EX);
+            WCHAR unicodeChar[4] = {};
+
+            // Check if shift is pressed
+            bool shiftDown = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+
+            // If shift is pressed, convert to symbol: !@#$%
+            if (shiftDown) {
                 keyboardState[VK_SHIFT] |= 0x80;
             }
-            if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
-                keyboardState[VK_LSHIFT] |= 0x80;
-            }
-            if (GetAsyncKeyState(VK_RSHIFT) & 0x8000) {
-                keyboardState[VK_RSHIFT] |= 0x80;
-            }
-            if (GetAsyncKeyState(VK_CONTROL) & 0x8000) {
-                keyboardState[VK_CONTROL] |= 0x80;
-            }
-            if (GetAsyncKeyState(VK_MENU) & 0x8000) {    // Alt Key     
-                keyboardState[VK_MENU] |= 0x80;
-            }
-            if (GetKeyState(VK_CAPITAL)) { // Capslock
-                keyboardState[VK_CAPITAL] |= 0x01;
+
+            int result = ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
+
+            // If Caps Lock is on, we convert the character to uppercase
+            if (IsCapsLockOn() && !shiftDown) {
+                unicodeChar[0] = towupper(unicodeChar[0]);
             }
 
-            // Map the virtual key code to a scan code
-            UINT scanCode = MapVirtualKey(p->vkCode, MAPVK_VK_TO_VSC_EX);
-
-            // Convert the virtual key code to a Unicode character
-            WCHAR unicodeChar[4] = {};
-            int result           = ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
-
-            if (unicodeChar[0] != 8 && unicodeChar[0] != 0) { // If character is not backspace
-				keyBuffer += towlower(unicodeChar[0]); // For now, only do lowercase characters
+            // If character is not backspace
+            if (unicodeChar[0] != 8 && unicodeChar[0] != 0) {
+                keyBuffer += unicodeChar[0]; // Otherwise proceed as normal
 
                 // TO-DO: make a switch-case statement for every special key or fix it in a better way
 
@@ -304,8 +296,16 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                         continue;
                     }
 
+                    bool caseSensitive = false; // FIXME: make this a setting in the JSON file
+                    int  buff_matches  = 0;
+
                     // Compare the end of the buffer with the trigger string to see if we match this shortcut
-                    int buff_matches = keyBuffer.compare(keyBuffer.size() - trigger.size(), trigger.size(), trigger) == 0;
+                    if (caseSensitive) {
+                        buff_matches = strEndsWith(keyBuffer, trigger);
+                    }
+                    else {
+                        buff_matches = strEndsWithCI(keyBuffer, trigger);
+                    }
 
                     if (DEBUG_LEVEL >= 2) {
                         char buffer[100];
