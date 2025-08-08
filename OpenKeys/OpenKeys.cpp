@@ -47,6 +47,7 @@ bool START_MINIMIZED = false;
 bool enableLogging   = true;
 int inputMethod      = METHOD_SENDKEYS;
 bool easterEgg       = false;
+bool caseSensitive   = false;
 std::wstring prefix;
 std::wstring gotochar;
 std::wstring version;
@@ -201,6 +202,9 @@ void LoadDataFromJson(nlohmann::json jsonData) {
     }
     if (JsonHasKey(jsonData, "ternary")) {
         easterEgg = true;
+    }
+    if (JsonHasKey(jsonData, "case_sensitive")) {
+        caseSensitive = jsonData["case_sensitive"];
     }
     if (JsonHasKey(jsonData, "input_method")) {
         std::wstring inputMethodWish = Utf8ToWstring(jsonData["input_method"]);
