@@ -7,6 +7,8 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <cwctype>   // for std::towlower
+#include <algorithm> // for std::equal
 
 // Global log file stream
 std::ofstream LOG;
@@ -189,4 +191,33 @@ std::wstring GetDateTimeHuman()
     wcsftime(buffer, sizeof(buffer) / sizeof(wchar_t), L"%B %d, %I:%M %p", &localTime);
 
     return std::wstring(buffer);
+}
+
+// Check if a string ends with another string, case-insensitive
+bool strEndsWithCI(const std::wstring& needle, const std::wstring& haystack) {
+    if (haystack.size() > needle.size()) return false;
+
+    return std::equal(
+        haystack.rbegin(), haystack.rend(), needle.rbegin(),
+        [](wchar_t a, wchar_t b) {
+            return std::towlower(static_cast<wint_t>(a)) ==
+                std::towlower(static_cast<wint_t>(b));
+        }
+    );
+}
+
+// Check if a string ends with another string, case-sensitive
+bool strEndsWith(const std::wstring& str, const std::wstring& suffix) {
+    if (suffix.size() > str.size()) return false;
+    return std::equal(
+        suffix.rbegin(), suffix.rend(),
+        str.rbegin()
+    );
+}
+
+// Check if Caps Lock is currently on
+bool IsCapsLockOn() {
+    // VK_CAPITAL = virtual-key code for Caps Lock
+    // If low-order bit = 1, the key is toggled ON
+    return (GetKeyState(VK_CAPITAL) & 0x0001) != 0;
 }
