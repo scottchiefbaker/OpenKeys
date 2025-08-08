@@ -300,7 +300,6 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                         continue;
                     }
 
-                    bool caseSensitive = false; // FIXME: make this a setting in the JSON file
                     int  buff_matches  = 0;
 
                     // Compare the end of the buffer with the trigger string to see if we match this shortcut
