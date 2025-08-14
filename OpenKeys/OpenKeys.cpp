@@ -129,10 +129,10 @@ std::string DownloadJsonFromURL(const std::string& url) {
 bool JsonHasKey(nlohmann::json jsonData, std::string key) {
     if (jsonData.find(key) != jsonData.end()) {
         return true;
-	}
-	else {
+    }
+    else {
         return false;
-	}
+    }
 }
 nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
     JSON_FILE_LOADED = false; // Reset the flag
@@ -144,7 +144,7 @@ nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
         log_line("Failed to open file " + wstringToString(filename));
         JSON_FILE_LOADED = false; // Couldn't find file
         return {};
-	}
+    }
 
     JSON_FILE_LOADED = true; // Could find file
     
@@ -163,24 +163,24 @@ nlohmann::json LoadJsonFromFile(const std::wstring& filename) {
 }
 nlohmann::json LoadJsonFromUrl(const std::string& url) {
     JSON_URL_LOADED = false; // Reset the flag
-	std::string jsonContent = DownloadJsonFromURL(url);
-	if (jsonContent.empty()) {
-		displayedText = L"Failed to download JSON from URL";
+    std::string jsonContent = DownloadJsonFromURL(url);
+    if (jsonContent.empty()) {
+        displayedText = L"Failed to download JSON from URL";
         log_line("Failed to open url " + url);
         JSON_URL_LOADED = false; // Couldn't open url
         return {};
-	}
+    }
 
     JSON_URL_LOADED = true; // Could open url
-	nlohmann::json jsonData = nlohmann::json::parse(jsonContent, nullptr, false);
+    nlohmann::json jsonData = nlohmann::json::parse(jsonContent, nullptr, false);
 
     // If the JSON is still invalid, throw fatal error
     if (jsonData.is_discarded()) {
-		displayedText = L"Failed to parse JSON from URL";
-		log_line("Failed to parse JSON from URL: " + url);
-		JSON_URL_LOADED = false; // Couldn't parse json
-		return {};
-	}
+        displayedText = L"Failed to parse JSON from URL";
+        log_line("Failed to parse JSON from URL: " + url);
+        JSON_URL_LOADED = false; // Couldn't parse json
+        return {};
+    }
 
     std::string version = "";
     version = jsonData.value("version", "");
@@ -234,6 +234,79 @@ void LoadDataFromJson(nlohmann::json jsonData) {
     }
 }
 
+// Add a character to the buffer one at a time
+WCHAR addCharToBuffer(wchar_t c) {
+    // If the character is not a backspace, we add it to the buffer
+    if (c != 8 && c != 0) {
+        keyBuffer += c;
+
+        // If we're larger than X characters we erase the first char to keep the buffer manageable
+        if (keyBuffer.size() > 12) keyBuffer.erase(0, 1);
+
+        char mb[8] = {};
+        WideCharToMultiByte(CP_UTF8, 0, &c, 1, mb, sizeof(mb), NULL, NULL);
+        debug_print("addChar: %s\n", mb);
+
+        return c;
+    }
+    else if (c == 8 && keyBuffer.size() > 0) { // If it IS backspace, don't add to buffer, and remove last entry
+        keyBuffer.pop_back();
+
+        debug_print("addChar: BackSpace!\n");
+
+        return 0; // Return 0 to indicate backspace was pressed
+    }
+}
+
+bool checkForMatch() {
+    // Loop through each known shortcut and see if we match
+    for (const auto& pair : shortcuts) {
+        std::wstring trigger = prefix + pair.first;
+
+        // Make sure we have enough buffer to contain the trigger string
+        int has_enough_buff = keyBuffer.size() >= trigger.size();
+        if (!has_enough_buff) {
+            continue;
+        }
+
+        int buff_matches = 0;
+
+        // Compare the end of the buffer with the trigger string to see if we match this shortcut
+        if (caseSensitive) {
+            buff_matches = strEndsWith(keyBuffer, trigger);
+        }
+        else {
+            buff_matches = strEndsWithCI(keyBuffer, trigger);
+        }
+
+        if (buff_matches) {
+            keyBuffer.clear();
+
+            if (enableLogging) {
+                // Log the shortcut trigger
+                char buffer[100];
+                snprintf(buffer, sizeof(buffer), "Shortcut '%ls' triggered", pair.first.c_str());
+                log_line(buffer);
+
+                // Update the status bar with the shortcut trigger
+                get_datetime_string();
+                snprintf(buffer, sizeof(buffer), "%ls: Shortcut '%ls' triggered", GetDateTimeHuman().c_str(), pair.first.c_str());
+
+                UpdateStatusBar(hStatus, 0, buffer);
+            }
+
+            pendingReplacement = pair.second;
+
+            // Post a custom message to your main window after 1 tick
+            PostMessage(g_hWnd, WM_SENDKEYS, (WPARAM)trigger.size(), 0);
+
+            return true; // We found a match
+        }
+    }
+
+    return false;
+}
+
 // This is where the keypress is captured and compared against the list of shortcuts
 static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HC_ACTION) {
@@ -242,6 +315,7 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
         if (p->flags & LLKHF_INJECTED) {
             return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
         }
+
         // Keydown event
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
             BYTE keyboardState[256];
@@ -265,88 +339,23 @@ static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lP
                 keyboardState[VK_SHIFT] |= 0x80;
             }
 
+            debug_print("Key pressed: %d, Scan code: %d\n", p->vkCode, scanCode);
+
             int result = ToUnicode(p->vkCode, scanCode, keyboardState, unicodeChar, 4, 0);
 
-            // If Caps Lock is on, we convert the character to uppercase
-            if (IsCapsLockOn() && !shiftDown) {
-                unicodeChar[0] = towupper(unicodeChar[0]);
+            // If we have a valid character, we add it to the buffer
+            if (result > 0) {
+                WCHAR found_char = addCharToBuffer(unicodeChar[0]);
+                bool  hasMatch   = checkForMatch();
             }
+        }
 
-            // If character is not backspace
-            if (unicodeChar[0] != 8 && unicodeChar[0] != 0) {
-                keyBuffer += unicodeChar[0]; // Otherwise proceed as normal
+        if (DEBUG_LEVEL >= 2) {
+            char buffer[100];
+            snprintf(buffer, sizeof(buffer), "Buf: %ls", keyBuffer.c_str());
 
-                // TO-DO: make a switch-case statement for every special key or fix it in a better way
-
-                // If debug is enabled we log the last keypress
-                if (DEBUG_LEVEL > 0) {
-                    char buffer[100];
-                    snprintf(buffer, sizeof(buffer), "Last: %ls", unicodeChar);
-
-                    // Update the RIGHT status bar with the last key pressed
-                    UpdateStatusBar(hStatus, 1, buffer);
-                }
-
-                // If we're larger than 20 characters we erase the first char to keep the buffer manageable
-                if (keyBuffer.size() > 20) keyBuffer.erase(0, 1);
-
-                // Loop through each known shortcut and see if we match
-                for (const auto& pair : shortcuts) {
-                    std::wstring trigger = prefix + pair.first;
-
-                    // Make sure we have enough buffer to contain the trigger string
-                    int has_enough_buff = keyBuffer.size() >= trigger.size();
-                    if (!has_enough_buff) {
-                        continue;
-                    }
-
-                    int  buff_matches  = 0;
-
-                    // Compare the end of the buffer with the trigger string to see if we match this shortcut
-                    if (caseSensitive) {
-                        buff_matches = strEndsWith(keyBuffer, trigger);
-                    }
-                    else {
-                        buff_matches = strEndsWithCI(keyBuffer, trigger);
-                    }
-
-                    if (DEBUG_LEVEL >= 2) {
-                        char buffer[100];
-                        snprintf(buffer, sizeof(buffer), "Buf: %ls", keyBuffer.c_str());
-
-                        // Update the RIGHT status bar with the last key pressed
-                        UpdateStatusBar(hStatus, 1, buffer);
-                    }
-
-                    if (buff_matches) {
-                        keyBuffer.clear();
-
-                        if (enableLogging) {
-                            // Log the shortcut trigger
-                            char buffer[100];
-                            snprintf(buffer, sizeof(buffer), "Shortcut '%ls' triggered", pair.first.c_str());
-                            log_line(buffer);
-
-                            // Update the status bar with the shortcut trigger
-                            get_datetime_string();
-                            snprintf(buffer, sizeof(buffer), "%ls: Shortcut '%ls' triggered", GetDateTimeHuman().c_str(), pair.first.c_str());
-
-                            UpdateStatusBar(hStatus, 0, buffer);
-                        }
-
-                        pendingReplacement = pair.second;
-
-                        // Post a custom message to your main window after 1 tick
-                        PostMessage(g_hWnd, WM_SENDKEYS, (WPARAM)trigger.size(), 0);
-                        break;
-                    }
-                }
-            }
-            else if(unicodeChar[0] == 8) { // If it IS backspace, don't add to buffer, and remove last entry
-                if(keyBuffer.size() > 0) {
-                    keyBuffer.pop_back();
-                }
-            }
+            // Update the DEBUG status bar with the last key pressed
+            UpdateStatusBar(hStatus, 1, buffer);
         }
     }
 
@@ -403,16 +412,16 @@ int8_t LoadShortcuts() {
     nlohmann::json jsonFILE = LoadJsonFromFile(json_path);
     uint8_t ret             = 0; // Default return value
 
-	// If there is no local JSON file, we download the default one from github
+    // If there is no local JSON file, we download the default one from github
     if (jsonFILE.empty()) {
         log_line("Downloading default JSON from github: " + json_default_url);
         std::string json_default_data = DownloadJsonFromURL(json_default_url);
 
         if (json_default_data.empty()) {
-			// If the download fails, we create a default JSON from local data
-			log_line("Failed to download default JSON from github. Creating JSON from local data...");
+            // If the download fails, we create a default JSON from local data
+            log_line("Failed to download default JSON from github. Creating JSON from local data...");
             json_default_data = R"({"prefix": "`", "version": ")" + wstringToString(VERSION_STRING) + R"(", "shortcuts": {"example": "This is an example shortcut"}})";
-		}
+        }
 
         std::ofstream file;
         file.open(json_path);
@@ -468,18 +477,18 @@ int8_t LoadShortcuts() {
             else {
                 log_line("Did not overwrite local JSON, using local data");
 
-				ret = -1; // No need to overwrite, user chose not to
+                ret = -1; // No need to overwrite, user chose not to
             }
         }
         else if (jsonURL["version"] == jsonFILE["version"]) {
             log_line("Local and remote versions are the same");
 
-			ret = -2; // No need to overwrite, versions match
+            ret = -2; // No need to overwrite, versions match
         }
 
     }
     else {
-		ret = -3; // No external URL, so we just use the local data
+        ret = -3; // No external URL, so we just use the local data
     }
 
     LoadDataFromJson(jsonFILE);
@@ -883,9 +892,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
     case WM_CLOSE: {
         // Ask user if they want to close the window
         if (CloseConfirmation()) {
-			// If user confirms, close the window
+            // If user confirms, close the window
             CloseWindowAndExit();
-		}
+        }
     }
                  break;
     case WM_DESTROY: {

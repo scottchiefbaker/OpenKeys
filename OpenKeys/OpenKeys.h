@@ -221,3 +221,14 @@ bool IsCapsLockOn() {
     // If low-order bit = 1, the key is toggled ON
     return (GetKeyState(VK_CAPITAL) & 0x0001) != 0;
 }
+
+// Debug print function to output messages to the debug console
+void debug_print(const char* fmt, ...)
+{
+    char buffer[512];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    OutputDebugStringA(buffer);
+}
